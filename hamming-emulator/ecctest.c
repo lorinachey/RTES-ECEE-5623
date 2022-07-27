@@ -52,54 +52,54 @@ int main(void)
     //Demonstration of specific test cases
 
     // TEST CASE 1: bit 3 is d01 @ position 0
-    printf("**** TEST CASE 1: bit 3 is d01 @ position 0 ******\n");
+    printf("**** TEST CASE 1: No bit errors ******\n");
     write_byte(&ECC, base_addr+0, (unsigned char)0xAB);
-    bitToFlip=3;
-    flip_bit(&ECC, base_addr+0, bitToFlip);
-    assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == bitToFlip);
-    flip_bit(&ECC, base_addr+0, bitToFlip);
+    //bitToFlip=3;
+    // flip_bit(&ECC, base_addr+0, bitToFlip);
+    //assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == bitToFlip);
+    // flip_bit(&ECC, base_addr+0, bitToFlip);
     assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == NO_ERROR);
     printf("**** END TEST CASE 1 *****************************\n\n");
 
-    // TEST CASE 2: bit 10 is d05 @ position 10
-    printf("**** TEST CASE 2: bit 10 is d05 @ position 10 ****\n");
-    write_byte(&ECC, base_addr+0, (unsigned char)0x5A);
-    bitToFlip=10;
-    flip_bit(&ECC, base_addr+0, bitToFlip);
-    assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == bitToFlip);
-    flip_bit(&ECC, base_addr+0, bitToFlip);
-    assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == NO_ERROR);
-    printf("**** END TEST CASE 2 *****************************\n\n");
-
-    // TEST CASE 3: bit 0 is pW @ position 0
-    printf("**** TEST CASE 3: bit 0 is pW @ position 0 *******\n");
+    // TEST CASE 2: bit 0 is pW @ position 0 -> PW_ERROR
+    printf("**** TEST CASE 2: bit 0 is pW @ position 0 *******\n");
     write_byte(&ECC, base_addr+0, (unsigned char)0xCC);
     bitToFlip=0;
     flip_bit(&ECC, base_addr+0, bitToFlip);
     assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == PW_ERROR);
     printf("**** END TEST CASE 3 *****************************\n\n");
 
-    // TEST CASE 4: bit 1 is p01 @ position 1
-    printf("**** TEST CASE 4: bit 1 is p01 @ position 1 ******\n");
+    // TEST CASE 3: DBE
+    printf("**** TEST CASE 3: DBE ****\n");
+    write_byte(&ECC, base_addr+0, (unsigned char)0x5A);
+    bitToFlip=10;
+    flip_bit(&ECC, base_addr+0, bitToFlip);
+    bitToFlip=0;
+    flip_bit(&ECC, base_addr+0, bitToFlip);
+    assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == DOUBLE_BIT_ERROR);
+    printf("**** END TEST CASE 2 *****************************\n\n");
+
+    // TEST CASE 4: SBE
+    printf("**** TEST CASE 4: SBE ******\n");
     write_byte(&ECC, base_addr+0, (unsigned char)0xAB);
     bitToFlip=1;
     flip_bit(&ECC, base_addr+0, bitToFlip);
-    assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == bitToFlip);
+    assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == SINGLE_BIT_ERROR_CORRECTED);
     printf("**** END TEST CASE 4 *****************************\n\n");
     traceOff();
 
 
     // POSITIVE testing - do read after write on all locations
     
-    // TEST CASE 5: Read after Write all
-    printf("**** TEST CASE 5: Read after Write all ***********\n");
-    for(offset=0; offset < MEM_SIZE; offset++)
-        write_byte(&ECC, base_addr+offset, (unsigned char)offset);
+    // // TEST CASE 5: Read after Write all
+    // printf("**** TEST CASE 5: Read after Write all ***********\n");
+    // for(offset=0; offset < MEM_SIZE; offset++)
+    //     write_byte(&ECC, base_addr+offset, (unsigned char)offset);
 
-    // read all of the locations back without injecting and error
-    for(offset=0; offset < MEM_SIZE; offset++)
-        assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == NO_ERROR);
-    printf("**** END TEST CASE 5 *****************************\n\n");
+    // // read all of the locations back without injecting and error
+    // for(offset=0; offset < MEM_SIZE; offset++)
+    //     assert((rc=read_byte(&ECC, base_addr+offset, &byteToRead)) == NO_ERROR);
+    // printf("**** END TEST CASE 5 *****************************\n\n");
 
 
     return NO_ERROR;
