@@ -285,45 +285,45 @@ void main(void)
     else
         printf("pthread_create successful for service 3\n");
 
-    // Service_4 = RT_MAX-2	@ 1 Hz
-    //
-    rt_param[4].sched_priority = rt_max_prio - 3;
-    pthread_attr_setschedparam(&rt_sched_attr[4], &rt_param[4]);
-    rc = pthread_create(&threads[4], &rt_sched_attr[4], Service_4, (void *)&(threadParams[4]));
-    if (rc < 0)
-        perror("pthread_create for service 4");
-    else
-        printf("pthread_create successful for service 4\n");
+    // // Service_4 = RT_MAX-2	@ 1 Hz
+    // //
+    // rt_param[4].sched_priority = rt_max_prio - 3;
+    // pthread_attr_setschedparam(&rt_sched_attr[4], &rt_param[4]);
+    // rc = pthread_create(&threads[4], &rt_sched_attr[4], Service_4, (void *)&(threadParams[4]));
+    // if (rc < 0)
+    //     perror("pthread_create for service 4");
+    // else
+    //     printf("pthread_create successful for service 4\n");
 
-    // Service_5 = RT_MAX-3	@ 0.5 Hz
-    //
-    rt_param[5].sched_priority = rt_max_prio - 3;
-    pthread_attr_setschedparam(&rt_sched_attr[5], &rt_param[5]);
-    rc = pthread_create(&threads[5], &rt_sched_attr[5], Service_5, (void *)&(threadParams[5]));
-    if (rc < 0)
-        perror("pthread_create for service 5");
-    else
-        printf("pthread_create successful for service 5\n");
+    // // Service_5 = RT_MAX-3	@ 0.5 Hz
+    // //
+    // rt_param[5].sched_priority = rt_max_prio - 3;
+    // pthread_attr_setschedparam(&rt_sched_attr[5], &rt_param[5]);
+    // rc = pthread_create(&threads[5], &rt_sched_attr[5], Service_5, (void *)&(threadParams[5]));
+    // if (rc < 0)
+    //     perror("pthread_create for service 5");
+    // else
+    //     printf("pthread_create successful for service 5\n");
 
-    // Service_6 = RT_MAX-2	@ 1 Hz
-    //
-    rt_param[6].sched_priority = rt_max_prio - 2;
-    pthread_attr_setschedparam(&rt_sched_attr[6], &rt_param[6]);
-    rc = pthread_create(&threads[6], &rt_sched_attr[6], Service_6, (void *)&(threadParams[6]));
-    if (rc < 0)
-        perror("pthread_create for service 6");
-    else
-        printf("pthread_create successful for service 6\n");
+    // // Service_6 = RT_MAX-2	@ 1 Hz
+    // //
+    // rt_param[6].sched_priority = rt_max_prio - 2;
+    // pthread_attr_setschedparam(&rt_sched_attr[6], &rt_param[6]);
+    // rc = pthread_create(&threads[6], &rt_sched_attr[6], Service_6, (void *)&(threadParams[6]));
+    // if (rc < 0)
+    //     perror("pthread_create for service 6");
+    // else
+    //     printf("pthread_create successful for service 6\n");
 
-    // Service_7 = RT_MIN	0.1 Hz
-    //
-    rt_param[7].sched_priority = rt_min_prio;
-    pthread_attr_setschedparam(&rt_sched_attr[7], &rt_param[7]);
-    rc = pthread_create(&threads[7], &rt_sched_attr[7], Service_7, (void *)&(threadParams[7]));
-    if (rc < 0)
-        perror("pthread_create for service 7");
-    else
-        printf("pthread_create successful for service 7\n");
+    // // Service_7 = RT_MIN	0.1 Hz
+    // //
+    // rt_param[7].sched_priority = rt_min_prio;
+    // pthread_attr_setschedparam(&rt_sched_attr[7], &rt_param[7]);
+    // rc = pthread_create(&threads[7], &rt_sched_attr[7], Service_7, (void *)&(threadParams[7]));
+    // if (rc < 0)
+    //     perror("pthread_create for service 7");
+    // else
+    //     printf("pthread_create successful for service 7\n");
 
     // Wait for service threads to initialize and await relese by sequencer.
     //
@@ -406,15 +406,15 @@ void *Sequencer(void *threadp)
         // Release each service at a sub-rate of the generic sequencer rate
 
         // Servcie_1 = RT_MAX-1	@ 1 Hz
-        if ((seqCnt % 30) == 0)
+        if ((seqCnt % 3) == 0)
             sem_post(&semS1);
 
         // Service_2 = RT_MAX-2	@ 10 Hz
-        if ((seqCnt % 300) == 0)
+        if ((seqCnt % 30) == 0)
             sem_post(&semS2);
 
         // Service_3 = RT_MAX-3	@ 30 Hz
-        if ((seqCnt % 900) == 0)
+        if ((seqCnt % 300) == 0)
             sem_post(&semS3);
 
         // // Service_4 = RT_MAX-2	@ 1 Hz
@@ -460,7 +460,7 @@ void *Service_1(void *threadp)
     threadParams_t *threadParams = (threadParams_t *)threadp;
 
     gettimeofday(&current_time_val, (struct timezone *)0);
-    syslog(LOG_CRIT, "RTES: Frame Sampler thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+    syslog(LOG_CRIT, "RTES: S1 Frame Sampler thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
     printf("Frame Sampler thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
 
     while (!abortS1)
@@ -469,7 +469,7 @@ void *Service_1(void *threadp)
         S1Cnt++;
 
         gettimeofday(&current_time_val, (struct timezone *)0);
-        syslog(LOG_CRIT, "RTES: Frame Sampler release %llu @ sec=%d, msec=%d\n", S1Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+        syslog(LOG_CRIT, "RTES: S1 Frame Sampler release %llu @ sec=%d, msec=%d\n", S1Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
     }
 
     pthread_exit((void *)0);
@@ -483,7 +483,7 @@ void *Service_2(void *threadp)
     threadParams_t *threadParams = (threadParams_t *)threadp;
 
     gettimeofday(&current_time_val, (struct timezone *)0);
-    syslog(LOG_CRIT, "RTES: Time-stamp with Image Analysis thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+    syslog(LOG_CRIT, "RTES: S2 Time-stamp with Image Analysis thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
     printf("Time-stamp with Image Analysis thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
 
     while (!abortS2)
@@ -492,7 +492,7 @@ void *Service_2(void *threadp)
         S2Cnt++;
 
         gettimeofday(&current_time_val, (struct timezone *)0);
-        syslog(LOG_CRIT, "RTES: Time-stamp with Image Analysis release %llu @ sec=%d, msec=%d\n", S2Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+        syslog(LOG_CRIT, "RTES: S2 Time-stamp with Image Analysis release %llu @ sec=%d, msec=%d\n", S2Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
     }
 
     pthread_exit((void *)0);
@@ -506,7 +506,7 @@ void *Service_3(void *threadp)
     threadParams_t *threadParams = (threadParams_t *)threadp;
 
     gettimeofday(&current_time_val, (struct timezone *)0);
-    syslog(LOG_CRIT, "RTES: Difference Image Proc thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+    syslog(LOG_CRIT, "RTES: S3 Difference Image Proc thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
     printf("Difference Image Proc thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
 
     while (!abortS3)
@@ -515,7 +515,7 @@ void *Service_3(void *threadp)
         S3Cnt++;
 
         gettimeofday(&current_time_val, (struct timezone *)0);
-        syslog(LOG_CRIT, "RTES: Difference Image Proc release %llu @ sec=%d, msec=%d\n", S3Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+        syslog(LOG_CRIT, "RTES: S3 Difference Image Proc release %llu @ sec=%d, msec=%d\n", S3Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
     }
 
     pthread_exit((void *)0);
