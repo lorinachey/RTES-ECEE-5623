@@ -56,7 +56,7 @@
 //#define MY_CLOCK_TYPE CLOCK_MONTONIC_COARSE
 
 int abortTest = FALSE;
-int abortS1 = FALSE, abortS2 = FALSE, abortS3 = FALSE;
+int abortS1_frame_acq = FALSE, abortS2_frame_proc = FALSE, abortS3_frame_store = FALSE;
 sem_t semS1_frame_acq, semS2_frame_proc, semS3_frame_store;
 struct timespec start_time_val;
 double start_realtime;
@@ -255,15 +255,11 @@ void main(void)
 
     signal(SIGALRM, (void (*)())Sequencer);
 
-    /* arm the interval timer */
+    /* Arm the interval timer with a timer of 100 times per second */
     itime.it_interval.tv_sec = 0;
     itime.it_interval.tv_nsec = 10000000;
     itime.it_value.tv_sec = 0;
     itime.it_value.tv_nsec = 10000000;
-    // itime.it_interval.tv_sec = 1;
-    // itime.it_interval.tv_nsec = 0;
-    // itime.it_value.tv_sec = 1;
-    // itime.it_value.tv_nsec = 0;
 
     timer_settime(timer_1, flags, &itime, &last_itime);
 
@@ -284,7 +280,7 @@ void Sequencer(int id)
 {
     struct timespec current_time_val;
     double current_realtime;
-    int rc, flags = 0;
+    int flags = 0;
 
     // received interval timer signal
     if (abortTest)
@@ -298,9 +294,9 @@ void Sequencer(int id)
         printf("Disabling sequencer interval timer with abort=%d and %llu\n", abortTest, seqCnt);
 
         // shutdown all services
-        abortS1 = TRUE;
-        abortS2 = TRUE;
-        abortS3 = TRUE;
+        abortS1_frame_acq = TRUE;
+        abortS2_frame_proc = TRUE;
+        abortS3_frame_store = TRUE;
         sem_post(&semS1_frame_acq);
         sem_post(&semS2_frame_proc);
         sem_post(&semS3_frame_store);
@@ -309,21 +305,20 @@ void Sequencer(int id)
     seqCnt++;
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val); current_realtime=realtime(&current_time_val);
-    printf("Sequencer on core %d for cycle %llu @ sec=%6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
-    syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec=%6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
+    // printf("Sequencer on core %d for cycle %llu @ sec=%6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
+    // syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec=%6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
 
-    // Release each service at a sub-rate of the generic sequencer rate
-
-    // Servcie_1 @ 5 Hz
-    if ((seqCnt % 20) == 0)
+    // Release each service at a sub-rate of the generic sequencer rate which is set to run at 100Hz
+    // Servcie_1 @ 20 Hz
+    if ((seqCnt % 5) == 0)
         sem_post(&semS1_frame_acq);
 
-    // Service_2 @ 1 Hz
-    if ((seqCnt % 100) == 0)
+    // Service_2 @ 2 Hz
+    if ((seqCnt % 50) == 0)
         sem_post(&semS2_frame_proc);
 
-    // Service_3 @ 1 Hz
-    if ((seqCnt % 100) == 0)
+    // Service_3 @ 2 Hz
+    if ((seqCnt % 50) == 0)
         sem_post(&semS3_frame_store);
 }
 
@@ -332,7 +327,6 @@ void *Service_1_frame_acquisition(void *threadp)
     struct timespec current_time_val;
     double current_realtime;
     unsigned long long S1Cnt = 0;
-    threadParams_t *threadParams = (threadParams_t *)threadp;
 
     // Start up processing and resource initialization
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
@@ -340,12 +334,12 @@ void *Service_1_frame_acquisition(void *threadp)
     syslog(LOG_CRIT, "RTES S1 thread @ sec=%6.9lf\n", current_realtime - start_realtime);
     printf("S1 thread @ sec=%6.9lf\n", current_realtime - start_realtime);
 
-    while (!abortS1) // check for synchronous abort request
+    while (!abortS1_frame_acq) // check for synchronous abort request
     {
         // wait for service request from the sequencer, a signal handler or ISR in kernel
         sem_wait(&semS1_frame_acq);
 
-        if (abortS1)
+        if (abortS1_frame_acq)
             break;
         S1Cnt++;
 
@@ -374,18 +368,17 @@ void *Service_2_frame_process(void *threadp)
     double current_realtime;
     unsigned long long S2Cnt = 0;
     int process_cnt;
-    threadParams_t *threadParams = (threadParams_t *)threadp;
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
     syslog(LOG_CRIT, "RTES S2 thread @ sec=%6.9lf\n", current_realtime - start_realtime);
     printf("S2 thread @ sec=%6.9lf\n", current_realtime - start_realtime);
 
-    while (!abortS2)
+    while (!abortS2_frame_proc)
     {
         sem_wait(&semS2_frame_proc);
 
-        if (abortS2)
+        if (abortS2_frame_proc)
             break;
         S2Cnt++;
 
@@ -406,17 +399,16 @@ void *Service_3_frame_storage(void *threadp)
     double current_realtime;
     unsigned long long S3Cnt = 0;
     int store_cnt;
-    threadParams_t *threadParams = (threadParams_t *)threadp;
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
     syslog(LOG_CRIT, "RTES S3 thread @ sec=%6.9lf\n", current_realtime - start_realtime);
 
-    while (!abortS3)
+    while (!abortS3_frame_store)
     {
         sem_wait(&semS3_frame_store);
 
-        if (abortS3)
+        if (abortS3_frame_store)
             break;
         S3Cnt++;
 
