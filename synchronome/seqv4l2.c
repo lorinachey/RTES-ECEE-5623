@@ -1,18 +1,21 @@
-// Sam Siewert, December 2020
-//
-// Sequencer Generic Demonstration
-//
-// Sequencer - 100 Hz
-//                   [gives semaphores to all other services]
-// Service_1 - 25 Hz, every 4th Sequencer loop reads a V4L2 video frame
-// Service_2 -  1 Hz, every 100th Sequencer loop writes out the current video frame
-//
-// With the above, priorities by RM policy would be:
-//
-// Sequencer = RT_MAX	@ 100 Hz
-// Servcie_1 = RT_MAX-1	@ 25  Hz
-// Service_2 = RT_MIN	@ 1   Hz
-//
+/** This code modified and adapted by Lorin Achey, July 2022.
+    Original author: Sam Siewert, December 2020
+    Original source code: https://github.com/siewertsmooc/RTES-ECEE-5623
+
+Example Sequencer:
+    Sequencer - 100 Hz
+                    [gives semaphores to all other services]
+    Service_1 - 25 Hz, every 4th Sequencer loop reads a V4L2 video frame
+    Service_2 -  1 Hz, every 100th Sequencer loop writes out the current video frame
+
+For the synchronome project, priorities by Rate Monotonic policy are changed to:
+
+    Sequencer = RT_MAX	@ 100 Hz
+    Servcie_1_frame_acq   = RT_MAX-1	@ 20  Hz
+    Service_2_frame_proc  = RT_MAX-2	@ 2   Hz
+    Service_3_frame_store = RT_MAX-3	@ 2   Hz
+
+**/
 
 // This is necessary for CPU affinity macros in Linux
 #define _GNU_SOURCE
@@ -41,6 +44,7 @@
 #define FALSE (0)
 
 #define RT_CORE (2)
+#define FRAME_ACQ_CORE (3)
 
 #define NUM_THREADS (3)
 
@@ -52,8 +56,6 @@
 //#define MY_CLOCK_TYPE CLOCK_REALTIME
 //#define MY_CLOCK_TYPE CLOCK_MONOTONIC
 #define MY_CLOCK_TYPE CLOCK_MONOTONIC_RAW
-//#define MY_CLOCK_TYPE CLOCK_REALTIME_COARSE
-//#define MY_CLOCK_TYPE CLOCK_MONTONIC_COARSE
 
 int abortTest = FALSE;
 int abortS1_frame_acq = FALSE, abortS2_frame_proc = FALSE, abortS3_frame_store = FALSE;
@@ -180,27 +182,44 @@ void main(void)
 
     for (i = 0; i < NUM_THREADS; i++)
     {
-        // run ALL threads on core RT_CORE
-        CPU_ZERO(&threadcpu);
-        cpuidx = (RT_CORE);
-        CPU_SET(cpuidx, &threadcpu);
+        if (i == 0) {
+            // run the frame acquisition on it's own core
+            CPU_ZERO(&threadcpu);
+            cpuidx = (FRAME_ACQ_CORE);
+            CPU_SET(cpuidx, &threadcpu);
 
-        rc = pthread_attr_init(&rt_sched_attr[i]);
-        rc = pthread_attr_setinheritsched(&rt_sched_attr[i], PTHREAD_EXPLICIT_SCHED);
-        rc = pthread_attr_setschedpolicy(&rt_sched_attr[i], SCHED_FIFO);
-        rc = pthread_attr_setaffinity_np(&rt_sched_attr[i], sizeof(cpu_set_t), &threadcpu);
+            rc = pthread_attr_init(&rt_sched_attr[i]);
+            rc = pthread_attr_setinheritsched(&rt_sched_attr[i], PTHREAD_EXPLICIT_SCHED);
+            rc = pthread_attr_setschedpolicy(&rt_sched_attr[i], SCHED_FIFO);
+            rc = pthread_attr_setaffinity_np(&rt_sched_attr[i], sizeof(cpu_set_t), &threadcpu);
 
-        rt_param[i].sched_priority = rt_max_prio - i;
-        pthread_attr_setschedparam(&rt_sched_attr[i], &rt_param[i]);
+            rt_param[i].sched_priority = rt_max_prio - i;
+            pthread_attr_setschedparam(&rt_sched_attr[i], &rt_param[i]);
 
-        threadParams[i].threadIdx = i;
+            threadParams[i].threadIdx = i;
+        } else {
+            // run frame_proc and frame_store services on a separate core
+            CPU_ZERO(&threadcpu);
+            cpuidx = (RT_CORE);
+            CPU_SET(cpuidx, &threadcpu);
+
+            rc = pthread_attr_init(&rt_sched_attr[i]);
+            rc = pthread_attr_setinheritsched(&rt_sched_attr[i], PTHREAD_EXPLICIT_SCHED);
+            rc = pthread_attr_setschedpolicy(&rt_sched_attr[i], SCHED_FIFO);
+            rc = pthread_attr_setaffinity_np(&rt_sched_attr[i], sizeof(cpu_set_t), &threadcpu);
+
+            rt_param[i].sched_priority = rt_max_prio - i;
+            pthread_attr_setschedparam(&rt_sched_attr[i], &rt_param[i]);
+
+            threadParams[i].threadIdx = i;
+        }
     }
 
     printf("Service threads will run on %d CPU cores\n", CPU_COUNT(&threadcpu));
 
     // Create Service threads which will block awaiting release for:
 
-    // Servcie_1 = RT_MAX-1	@ 25 Hz
+    // Servcie_1 = RT_MAX-1	@ 20 Hz
     rt_param[0].sched_priority = rt_max_prio - 1;
     pthread_attr_setschedparam(&rt_sched_attr[0], &rt_param[0]);
     rc = pthread_create(&threads[0],                                // pointer to thread descriptor
@@ -213,7 +232,7 @@ void main(void)
     else
         printf("pthread_create successful for service 1\n");
 
-    // Service_2 = RT_MAX-2	@ 1 Hz
+    // Service_2 = RT_MAX-2	@ 2 Hz
     rt_param[1].sched_priority = rt_max_prio - 2;
     pthread_attr_setschedparam(&rt_sched_attr[1], &rt_param[1]);
     rc = pthread_create(&threads[1],
@@ -225,7 +244,7 @@ void main(void)
     else
         printf("pthread_create successful for service 2\n");
 
-    // Service_3 = RT_MAX-3	@ 1 Hz
+    // Service_3 = RT_MAX-3	@ 2 Hz
     rt_param[2].sched_priority = rt_max_prio - 3;
     pthread_attr_setschedparam(&rt_sched_attr[2], &rt_param[2]);
     rc = pthread_create(&threads[2],
@@ -349,7 +368,7 @@ void *Service_1_frame_acquisition(void *threadp)
         // on order of up to milliseconds of latency to get time
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "RTES S1 at 25 Hz on core %d for release %llu @ sec=%6.9lf\n", sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "RTES S1 at 20 Hz on core %d for release %llu @ sec=%6.9lf\n", sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         if (S1Cnt > 250)
         {
@@ -387,7 +406,7 @@ void *Service_2_frame_process(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "RTES S2 at 1 Hz on core %d for release %llu @ sec=%6.9lf\n", sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "RTES S2 at 2 Hz on core %d for release %llu @ sec=%6.9lf\n", sched_getcpu(), S2Cnt, current_realtime - start_realtime);
     }
 
     pthread_exit((void *)0);
@@ -417,7 +436,7 @@ void *Service_3_frame_storage(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "RTES S3 at 1 Hz on core %d for release %llu @ sec=%6.9lf\n", sched_getcpu(), S3Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "RTES S3 at 2 Hz on core %d for release %llu @ sec=%6.9lf\n", sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
         if (store_cnt == 10)
