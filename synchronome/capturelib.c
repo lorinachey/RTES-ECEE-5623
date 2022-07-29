@@ -268,6 +268,7 @@ int process_framecnt = 0;
 int save_framecnt = 0;
 
 unsigned char scratchpad_buffer[MAX_HRES * MAX_VRES * MAX_PIXEL_SIZE];
+unsigned char scratchpad_buffer_prev_image[MAX_HRES * MAX_VRES * MAX_PIXEL_SIZE];
 
 static int save_image(const void *p, int size, struct timespec *frame_time)
 {
@@ -318,7 +319,7 @@ static int save_image(const void *p, int size, struct timespec *frame_time)
     return save_framecnt;
 }
 
-static int process_image(const void *p, int size)
+static int process_image(const void *p, int size, int is_previous_image)
 {
     int i, newi, newsize = 0;
     int y_temp, y2_temp, u_temp, v_temp;
@@ -335,7 +336,7 @@ static int process_image(const void *p, int size)
     else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV)
     {
 #if defined(COLOR_CONVERT_RGB)
-
+        // TODO: Fix buffers for RGB
         // Pixels are YU and YV alternating, so YUYV which is 4 bytes
         // We want RGB, so RGBRGB which is 6 bytes
         //
@@ -354,9 +355,15 @@ static int process_image(const void *p, int size)
         //
         for (i = 0, newi = 0; i < size; i = i + 4, newi = newi + 2)
         {
-            // Y1=first byte and Y2=third byte
-            scratchpad_buffer[newi] = frame_ptr[i];
-            scratchpad_buffer[newi + 1] = frame_ptr[i + 2];
+            if (is_previous_image == 0) {
+                // Y1=first byte and Y2=third byte
+                scratchpad_buffer_prev_image[newi] = frame_ptr[i];
+                scratchpad_buffer_prev_image[newi + 1] = frame_ptr[i + 2];                
+            } else {
+                // Y1=first byte and Y2=third byte
+                scratchpad_buffer[newi] = frame_ptr[i];
+                scratchpad_buffer[newi + 1] = frame_ptr[i + 2];
+            }
         }
 #endif
     }
@@ -450,20 +457,47 @@ int seq_frame_read(void)
         errno_exit("VIDIOC_QBUF");
 }
 
+/**
+ * @brief Compare each image in the frame acquisition ring buffer. Determine if the difference after processing
+ *        is above a threshold for image quality. If it is, add that image to the dedicated storage ring buffer.
+ * 
+ * @return int 
+ */
 int seq_frame_process(void)
 {
-    int cnt;
+/*
+Check that head index != tail index (this indicates only one image avaiable)
+    call process_image on previous image (pointed to by tail)
+    call process_image on current image (pointed to by head)
+    *process_image will update the scratch_padbuffers accordingly* TODO: add boolean to process_image method    
+    now we should be able to compute the difference between the two scratchpad buffers
+    log the total difference value with a timestamp
+    compare the values to the images saved to determine what to set the difference threshold to
+
+*/
+    int cnt, diff;
 
     // printf("processing rb.tail=%d, rb.head=%d, rb.count=%d\n", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
 
-    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
+    if (rb_frame_acq.head_idx != rb_frame_acq.tail_idx) {
+        printf("HEAD NOT EQUAL TAIL\n");
+        printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
 
-    cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
+        // Store the previous image in a scratchpad_buffer after processing
+        // TODO: does this need to use tail_idx instead of head_idx
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
 
-    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
-    rb_frame_acq.count = rb_frame_acq.count - 5;
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
-    // printf("rb.tail=%d, rb.head=%d, rb.count=%d ", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+
+        diff = compute_scratchpad_buffer_difference();
+        printf("Diff computed: %d\n", diff);
+
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 5;
+    }
+
 
     if (process_framecnt > 0)
     {
@@ -475,6 +509,24 @@ int seq_frame_process(void)
     return cnt;
 }
 
+int compute_scratchpad_buffer_difference() {
+    int i;
+    int difference = 0;
+    int loop_count = HRES * VRES * PIXEL_SIZE;
+
+    for (i = 0; i < loop_count; i++) {
+        difference = difference + abs(scratchpad_buffer[i] - scratchpad_buffer_prev_image[i]);
+    }
+
+    return difference;
+}
+
+// TODO: UPDATE THIS METHOD TO NOT SAVE EVERYTHING IN THE SCRATCHPAD BUFFER
+/**
+ * @brief Save an image from the frame store ring buffer and update the ring buffer accordingly.
+ * 
+ * @return int 
+ */
 int seq_frame_store(void)
 {
     int cnt;
