@@ -492,123 +492,123 @@ int seq_frame_store(void)
     return cnt;
 }
 
-static void mainloop(void)
-{
-    unsigned int count;
-    struct timespec read_delay;
-    struct timespec time_error;
+// static void mainloop(void)
+// {
+//     unsigned int count;
+//     struct timespec read_delay;
+//     struct timespec time_error;
 
-    // Replace this with a delay designed for your rate
-    // of frame acquitision and storage.
-    //
+//     // Replace this with a delay designed for your rate
+//     // of frame acquitision and storage.
+//     //
 
-#if (FRAMES_PER_SEC == 1)
-    printf("Running at 1 frame/sec\n");
-    read_delay.tv_sec = 0;
-    read_delay.tv_nsec = 920000000;
-#elif (FRAMES_PER_SEC == 10)
-    printf("Running at 10 frames/sec\n");
-    read_delay.tv_sec = 0;
-    read_delay.tv_nsec = 100000000;
-#elif (FRAMES_PER_SEC == 20)
-    printf("Running at 20 frames/sec\n");
-    read_delay.tv_sec = 0;
-    read_delay.tv_nsec = 50000000;
-#elif (FRAMES_PER_SEC == 25)
-    printf("Running at 25 frames/sec\n");
-    read_delay.tv_sec = 0;
-    read_delay.tv_nsec = 40000000;
-#elif (FRAMES_PER_SEC == 30)
-    printf("Running at 30 frames/sec\n");
-    read_delay.tv_sec = 0;
-    read_delay.tv_nsec = 33333333;
-#else
-    printf("Running at 1 frame/sec\n");
-    read_delay.tv_sec = 1;
-    read_delay.tv_nsec = 0;
-#endif
+// #if (FRAMES_PER_SEC == 1)
+//     printf("Running at 1 frame/sec\n");
+//     read_delay.tv_sec = 0;
+//     read_delay.tv_nsec = 920000000;
+// #elif (FRAMES_PER_SEC == 10)
+//     printf("Running at 10 frames/sec\n");
+//     read_delay.tv_sec = 0;
+//     read_delay.tv_nsec = 100000000;
+// #elif (FRAMES_PER_SEC == 20)
+//     printf("Running at 20 frames/sec\n");
+//     read_delay.tv_sec = 0;
+//     read_delay.tv_nsec = 50000000;
+// #elif (FRAMES_PER_SEC == 25)
+//     printf("Running at 25 frames/sec\n");
+//     read_delay.tv_sec = 0;
+//     read_delay.tv_nsec = 40000000;
+// #elif (FRAMES_PER_SEC == 30)
+//     printf("Running at 30 frames/sec\n");
+//     read_delay.tv_sec = 0;
+//     read_delay.tv_nsec = 33333333;
+// #else
+//     printf("Running at 1 frame/sec\n");
+//     read_delay.tv_sec = 1;
+//     read_delay.tv_nsec = 0;
+// #endif
 
-    count = FRAMES_TO_ACQUIRE;
+//     count = FRAMES_TO_ACQUIRE;
 
-    while (count > 0)
-    {
-        for (;;)
-        {
-            fd_set fds;
-            struct timeval tv;
-            int rc;
+//     while (count > 0)
+//     {
+//         for (;;)
+//         {
+//             fd_set fds;
+//             struct timeval tv;
+//             int rc;
 
-            FD_ZERO(&fds);
-            FD_SET(camera_device_fd, &fds);
+//             FD_ZERO(&fds);
+//             FD_SET(camera_device_fd, &fds);
 
-            /* Timeout */
-            tv.tv_sec = 2;
-            tv.tv_usec = 0;
+//             /* Timeout */
+//             tv.tv_sec = 2;
+//             tv.tv_usec = 0;
 
-            rc = select(camera_device_fd + 1, &fds, NULL, NULL, &tv);
+//             rc = select(camera_device_fd + 1, &fds, NULL, NULL, &tv);
 
-            if (-1 == rc)
-            {
-                if (EINTR == errno)
-                    continue;
-                errno_exit("select");
-            }
+//             if (-1 == rc)
+//             {
+//                 if (EINTR == errno)
+//                     continue;
+//                 errno_exit("select");
+//             }
 
-            if (0 == rc)
-            {
-                fprintf(stderr, "select timeout\n");
-                exit(EXIT_FAILURE);
-            }
+//             if (0 == rc)
+//             {
+//                 fprintf(stderr, "select timeout\n");
+//                 exit(EXIT_FAILURE);
+//             }
 
-            if (read_frame())
-            {
-                if (nanosleep(&read_delay, &time_error) != 0)
-                    perror("nanosleep");
-                else
-                {
-                    clock_gettime(CLOCK_MONOTONIC, &time_now);
-                    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
+//             if (read_frame())
+//             {
+//                 if (nanosleep(&read_delay, &time_error) != 0)
+//                     perror("nanosleep");
+//                 else
+//                 {
+//                     clock_gettime(CLOCK_MONOTONIC, &time_now);
+//                     fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
 
-                    if (read_framecnt > 1)
-                    {
-                        printf(" read at %lf, @ %lf FPS\n", (fnow - fstart), (double)(read_framecnt + 1) / (fnow - fstart));
+//                     if (read_framecnt > 1)
+//                     {
+//                         printf(" read at %lf, @ %lf FPS\n", (fnow - fstart), (double)(read_framecnt + 1) / (fnow - fstart));
 
-                        memcpy((void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-                        printf("memcpy to rb.tail=%d, rb.head=%d, ptr=%p\n", ring_buffer.tail_idx, ring_buffer.head_idx, (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]));
+//                         memcpy((void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
+//                         printf("memcpy to rb.tail=%d, rb.head=%d, ptr=%p\n", ring_buffer.tail_idx, ring_buffer.head_idx, (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]));
 
-                        // advance ring buffer for next read
-                        ring_buffer.tail_idx = (ring_buffer.tail_idx + 1) % ring_buffer.ring_size;
-                        ring_buffer.count++;
+//                         // advance ring buffer for next read
+//                         ring_buffer.tail_idx = (ring_buffer.tail_idx + 1) % ring_buffer.ring_size;
+//                         ring_buffer.count++;
 
-                        process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
-                        // process_image(buffers[frame_buf.index].start, frame_buf.bytesused);
-                        printf("bytesused=%d, hxvxp=%d\n", frame_buf.bytesused, HRES * VRES * PIXEL_SIZE);
-                        process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
+//                         process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
+//                         // process_image(buffers[frame_buf.index].start, frame_buf.bytesused);
+//                         printf("bytesused=%d, hxvxp=%d\n", frame_buf.bytesused, HRES * VRES * PIXEL_SIZE);
+//                         process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
 
-                        printf("process from rb.tail=%d, rb.head=%d, ptr=%p\n", ring_buffer.tail_idx, ring_buffer.head_idx, (void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]));
-                        save_image(scratchpad_buffer, HRES * VRES * PIXEL_SIZE, &time_now);
+//                         printf("process from rb.tail=%d, rb.head=%d, ptr=%p\n", ring_buffer.tail_idx, ring_buffer.head_idx, (void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]));
+//                         save_image(scratchpad_buffer, HRES * VRES * PIXEL_SIZE, &time_now);
 
-                        // advance ring buffer for next write
-                        ring_buffer.head_idx = (ring_buffer.head_idx + 1) % ring_buffer.ring_size;
-                        ring_buffer.count--;
-                    }
-                }
+//                         // advance ring buffer for next write
+//                         ring_buffer.head_idx = (ring_buffer.head_idx + 1) % ring_buffer.ring_size;
+//                         ring_buffer.count--;
+//                     }
+//                 }
 
-                if (-1 == xioctl(camera_device_fd, VIDIOC_QBUF, &frame_buf))
-                    errno_exit("VIDIOC_QBUF");
-                count--;
-                break;
-            }
+//                 if (-1 == xioctl(camera_device_fd, VIDIOC_QBUF, &frame_buf))
+//                     errno_exit("VIDIOC_QBUF");
+//                 count--;
+//                 break;
+//             }
 
-            /* EAGAIN - continue select loop unless count done. */
-            if (count <= 0)
-                break;
-        }
+//             /* EAGAIN - continue select loop unless count done. */
+//             if (count <= 0)
+//                 break;
+//         }
 
-        if (count <= 0)
-            break;
-    }
-}
+//         if (count <= 0)
+//             break;
+//     }
+// }
 
 static void stop_capturing(void)
 {
@@ -889,30 +889,29 @@ static void open_device(char *dev_name)
     }
 }
 
-int v4l2_frame_acquisition_loop(char *dev_name)
-{
+// int v4l2_frame_acquisition_loop(char *dev_name)
+// {
 
-    // initialization of V4L2
-    open_device(dev_name);
-    init_device(dev_name);
+//     // initialization of V4L2
+//     open_device(dev_name);
+//     init_device(dev_name);
 
-    start_capturing();
+//     start_capturing();
 
-    // service loop frame read
-    mainloop();
+//     // service loop frame read
+//     mainloop();
 
-    // shutdown of frame acquisition service
-    stop_capturing();
+//     // shutdown of frame acquisition service
+//     stop_capturing();
 
-    printf("Total capture time=%lf, for %d frames, %lf FPS\n", (fstop - fstart), read_framecnt, ((double)read_framecnt / (fstop - fstart)));
+//     printf("Total capture time=%lf, for %d frames, %lf FPS\n", (fstop - fstart), read_framecnt, ((double)read_framecnt / (fstop - fstart)));
 
-    uninit_device();
-    close_device();
-    fprintf(stderr, "\n");
-    return 0;
-}
+//     uninit_device();
+//     close_device();
+//     fprintf(stderr, "\n");
+//     return 0;
+// }
 
-// TODO: DELETE THESE?!
 int v4l2_frame_acquisition_initialization(char *dev_name)
 {
     // initialization of V4L2

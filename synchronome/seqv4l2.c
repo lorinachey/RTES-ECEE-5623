@@ -90,7 +90,7 @@ void print_scheduler(void);
 
 int v4l2_frame_acquisition_initialization(char *dev_name);
 int v4l2_frame_acquisition_shutdown(void);
-int v4l2_frame_acquisition_loop(char *dev_name);
+// int v4l2_frame_acquisition_loop(char *dev_name);
 
 void main(void)
 {
