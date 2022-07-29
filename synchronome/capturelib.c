@@ -100,7 +100,7 @@ struct ring_buffer_t
     struct save_frame_t save_frame[3 * FRAMES_PER_SEC];
 };
 
-static struct ring_buffer_t ring_buffer;
+static struct ring_buffer_t rb_frame_acq;
 
 static int camera_device_fd = -1;
 struct buffer *buffers;
@@ -432,10 +432,10 @@ int seq_frame_read(void)
     // save off copy of image with time-stamp here
     // printf("memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-    memcpy((void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
+    memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
 
-    ring_buffer.tail_idx = (ring_buffer.tail_idx + 1) % ring_buffer.ring_size;
-    ring_buffer.count++;
+    rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+    rb_frame_acq.count++;
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
     fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
@@ -456,12 +456,12 @@ int seq_frame_process(void)
 
     // printf("processing rb.tail=%d, rb.head=%d, rb.count=%d\n", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
 
-    ring_buffer.head_idx = (ring_buffer.head_idx + 2) % ring_buffer.ring_size;
+    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
-    cnt = process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
+    cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
 
-    ring_buffer.head_idx = (ring_buffer.head_idx + 3) % ring_buffer.ring_size;
-    ring_buffer.count = ring_buffer.count - 5;
+    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
+    rb_frame_acq.count = rb_frame_acq.count - 5;
 
     // printf("rb.tail=%d, rb.head=%d, rb.count=%d ", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
 
@@ -491,124 +491,6 @@ int seq_frame_store(void)
 
     return cnt;
 }
-
-// static void mainloop(void)
-// {
-//     unsigned int count;
-//     struct timespec read_delay;
-//     struct timespec time_error;
-
-//     // Replace this with a delay designed for your rate
-//     // of frame acquitision and storage.
-//     //
-
-// #if (FRAMES_PER_SEC == 1)
-//     printf("Running at 1 frame/sec\n");
-//     read_delay.tv_sec = 0;
-//     read_delay.tv_nsec = 920000000;
-// #elif (FRAMES_PER_SEC == 10)
-//     printf("Running at 10 frames/sec\n");
-//     read_delay.tv_sec = 0;
-//     read_delay.tv_nsec = 100000000;
-// #elif (FRAMES_PER_SEC == 20)
-//     printf("Running at 20 frames/sec\n");
-//     read_delay.tv_sec = 0;
-//     read_delay.tv_nsec = 50000000;
-// #elif (FRAMES_PER_SEC == 25)
-//     printf("Running at 25 frames/sec\n");
-//     read_delay.tv_sec = 0;
-//     read_delay.tv_nsec = 40000000;
-// #elif (FRAMES_PER_SEC == 30)
-//     printf("Running at 30 frames/sec\n");
-//     read_delay.tv_sec = 0;
-//     read_delay.tv_nsec = 33333333;
-// #else
-//     printf("Running at 1 frame/sec\n");
-//     read_delay.tv_sec = 1;
-//     read_delay.tv_nsec = 0;
-// #endif
-
-//     count = FRAMES_TO_ACQUIRE;
-
-//     while (count > 0)
-//     {
-//         for (;;)
-//         {
-//             fd_set fds;
-//             struct timeval tv;
-//             int rc;
-
-//             FD_ZERO(&fds);
-//             FD_SET(camera_device_fd, &fds);
-
-//             /* Timeout */
-//             tv.tv_sec = 2;
-//             tv.tv_usec = 0;
-
-//             rc = select(camera_device_fd + 1, &fds, NULL, NULL, &tv);
-
-//             if (-1 == rc)
-//             {
-//                 if (EINTR == errno)
-//                     continue;
-//                 errno_exit("select");
-//             }
-
-//             if (0 == rc)
-//             {
-//                 fprintf(stderr, "select timeout\n");
-//                 exit(EXIT_FAILURE);
-//             }
-
-//             if (read_frame())
-//             {
-//                 if (nanosleep(&read_delay, &time_error) != 0)
-//                     perror("nanosleep");
-//                 else
-//                 {
-//                     clock_gettime(CLOCK_MONOTONIC, &time_now);
-//                     fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
-
-//                     if (read_framecnt > 1)
-//                     {
-//                         printf(" read at %lf, @ %lf FPS\n", (fnow - fstart), (double)(read_framecnt + 1) / (fnow - fstart));
-
-//                         memcpy((void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-//                         printf("memcpy to rb.tail=%d, rb.head=%d, ptr=%p\n", ring_buffer.tail_idx, ring_buffer.head_idx, (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]));
-
-//                         // advance ring buffer for next read
-//                         ring_buffer.tail_idx = (ring_buffer.tail_idx + 1) % ring_buffer.ring_size;
-//                         ring_buffer.count++;
-
-//                         process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
-//                         // process_image(buffers[frame_buf.index].start, frame_buf.bytesused);
-//                         printf("bytesused=%d, hxvxp=%d\n", frame_buf.bytesused, HRES * VRES * PIXEL_SIZE);
-//                         process_image((void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE);
-
-//                         printf("process from rb.tail=%d, rb.head=%d, ptr=%p\n", ring_buffer.tail_idx, ring_buffer.head_idx, (void *)&(ring_buffer.save_frame[ring_buffer.head_idx].frame[0]));
-//                         save_image(scratchpad_buffer, HRES * VRES * PIXEL_SIZE, &time_now);
-
-//                         // advance ring buffer for next write
-//                         ring_buffer.head_idx = (ring_buffer.head_idx + 1) % ring_buffer.ring_size;
-//                         ring_buffer.count--;
-//                     }
-//                 }
-
-//                 if (-1 == xioctl(camera_device_fd, VIDIOC_QBUF, &frame_buf))
-//                     errno_exit("VIDIOC_QBUF");
-//                 count--;
-//                 break;
-//             }
-
-//             /* EAGAIN - continue select loop unless count done. */
-//             if (count <= 0)
-//                 break;
-//         }
-
-//         if (count <= 0)
-//             break;
-//     }
-// }
 
 static void stop_capturing(void)
 {
@@ -674,10 +556,10 @@ static void init_mmap(char *dev_name)
 
     printf("init_mmap req.count=%d\n", req.count);
 
-    ring_buffer.tail_idx = 0;
-    ring_buffer.head_idx = 0;
-    ring_buffer.count = 0;
-    ring_buffer.ring_size = 3 * FRAMES_PER_SEC;
+    rb_frame_acq.tail_idx = 0;
+    rb_frame_acq.head_idx = 0;
+    rb_frame_acq.count = 0;
+    rb_frame_acq.ring_size = 3 * FRAMES_PER_SEC;
 
     if (-1 == xioctl(camera_device_fd, VIDIOC_REQBUFS, &req))
     {
@@ -888,29 +770,6 @@ static void open_device(char *dev_name)
         exit(EXIT_FAILURE);
     }
 }
-
-// int v4l2_frame_acquisition_loop(char *dev_name)
-// {
-
-//     // initialization of V4L2
-//     open_device(dev_name);
-//     init_device(dev_name);
-
-//     start_capturing();
-
-//     // service loop frame read
-//     mainloop();
-
-//     // shutdown of frame acquisition service
-//     stop_capturing();
-
-//     printf("Total capture time=%lf, for %d frames, %lf FPS\n", (fstop - fstart), read_framecnt, ((double)read_framecnt / (fstop - fstart)));
-
-//     uninit_device();
-//     close_device();
-//     fprintf(stderr, "\n");
-//     return 0;
-// }
 
 int v4l2_frame_acquisition_initialization(char *dev_name)
 {
