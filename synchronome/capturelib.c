@@ -355,7 +355,7 @@ static int process_image(const void *p, int size, int is_previous_image)
         //
         for (i = 0, newi = 0; i < size; i = i + 4, newi = newi + 2)
         {
-            if (is_previous_image == 0) {
+            if (is_previous_image == 1) {
                 // Y1=first byte and Y2=third byte
                 scratchpad_buffer_prev_image[newi] = frame_ptr[i];
                 scratchpad_buffer_prev_image[newi + 1] = frame_ptr[i + 2];                
@@ -485,7 +485,7 @@ Check that head index != tail index (this indicates only one image avaiable)
 
         // Store the previous image in a scratchpad_buffer after processing
         // TODO: does this need to use tail_idx instead of head_idx
-        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
 
         rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
