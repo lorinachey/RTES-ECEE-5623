@@ -163,7 +163,7 @@ static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec 
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
     fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
-    printf("Frame written to flash at %lf, %d, bytes\n", (fnow - fstart), total);
+    // printf("Frame written to flash at %lf, %d, bytes\n", (fnow - fstart), total);
 
     close(dumpfd);
 }
@@ -197,7 +197,7 @@ static void dump_pgm(const void *p, int size, unsigned int tag, struct timespec 
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
     fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
-    printf("Frame written to flash at %lf, %d, bytes\n", (fnow - fstart), total);
+    // printf("Frame written to flash at %lf, %d, bytes\n", (fnow - fstart), total);
 
     close(dumpfd);
 }
@@ -305,14 +305,14 @@ static int save_image(const void *p, int size, struct timespec *frame_time)
         if (save_framecnt > 0)
         {
             dump_pgm(frame_ptr, (size / 2), process_framecnt, frame_time);
-            printf("Dump YUYV converted to YY size %d\n", size);
+            // printf("Dump YUYV converted to YY size %d\n", size);
         }
 #endif
     }
 
     else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_RGB24)
     {
-        printf("Dump RGB as-is size %d\n", size);
+        // printf("Dump RGB as-is size %d\n", size);
         dump_ppm(frame_ptr, size, process_framecnt, frame_time);
     }
     else
@@ -502,7 +502,7 @@ Check that head index != tail index (this indicates only one image avaiable)
     int cnt, diff;
     int max_sum = HRES * VRES * 255;
 
-    printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
+    //printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
@@ -523,7 +523,6 @@ Check that head index != tail index (this indicates only one image avaiable)
     {
         clock_gettime(CLOCK_MONOTONIC, &time_now);
         fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
-        printf(" processed at %lf, @ %lf FPS\n", (fnow - fstart), (double)(process_framecnt + 1) / (fnow - fstart));
     }
 
     return cnt;
@@ -531,7 +530,6 @@ Check that head index != tail index (this indicates only one image avaiable)
 
 void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
     memcpy((void *)&(rb_frame_store.save_frame[rb_frame_store.head_idx].frame[0]), scratchpad_buffer, (HRES * VRES * PIXEL_SIZE));
-    printf("After memcpy operation in copy image from scratchpad to frame store\n");
     rb_frame_store.head_idx = (rb_frame_store.head_idx + 1) % rb_frame_store.ring_size;
     rb_frame_store.count++;
 }
@@ -547,21 +545,6 @@ int get_image_sum_from_scratchpad() {
     return diff;
 }
 
-// Used to compute the difference between two images
-// TODO: May not be necessary!
-// int compute_scratchpad_buffer_difference() {
-//     int i;
-//     int difference = 0;
-//     int loop_count = HRES * VRES * PIXEL_SIZE;
-
-//     for (i = 0; i < loop_count; i++) {
-//         difference = difference + abs(scratchpad_buffer[i] - scratchpad_buffer_prev_image[i]);
-//     }
-
-//     return difference;
-// }
-
-// TODO: UPDATE THIS METHOD TO NOT SAVE EVERYTHING IN THE SCRATCHPAD BUFFER
 /**
  * @brief Save an image from the frame store ring buffer and update the ring buffer accordingly.
  * 
@@ -575,8 +558,6 @@ int seq_frame_store(void)
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
         rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
         rb_frame_store.count--;
-
-        printf("save_framecnt=%d ", save_framecnt);
     }
 
     if (save_framecnt > 0)
