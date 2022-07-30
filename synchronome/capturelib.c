@@ -467,7 +467,7 @@ int seq_frame_read(void)
  */
 int seq_frame_process(void)
 {
-/*
+/**
 Check that head index != tail index (this indicates only one image avaiable)
     call process_image on previous image (pointed to by tail)
     call process_image on current image (pointed to by head)
@@ -477,12 +477,6 @@ Check that head index != tail index (this indicates only one image avaiable)
     log the total difference value with a timestamp
     compare the values to the images saved to determine what to set the difference threshold to
 
-*/
-    int cnt, diff;
-    int max_sum = HRES * VRES * 255
-
-    printf("processing rb.tail=%d, rb.head=%d, rb.count=%d\n", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
-/**
     if (rb_frame_acq.head_idx != rb_frame_acq.tail_idx) {
         printf("HEAD NOT EQUAL TAIL\n");
         printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
@@ -502,16 +496,20 @@ Check that head index != tail index (this indicates only one image avaiable)
         rb_frame_acq.count = rb_frame_acq.count - 5;
     }
 */
+    int cnt, diff;
+    int max_sum = HRES * VRES * 255;
 
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
+    printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
 
-        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
-        diff = max_sum - get_image_sum_from_scratchpad();
-        printf("Diff computed: %d\n", diff);
+    cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
-        rb_frame_acq.count = rb_frame_acq.count - 5;
+    diff = max_sum - get_image_sum_from_scratchpad();
+    printf("Diff computed: %d\n", diff);
+
+    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
+    rb_frame_acq.count = rb_frame_acq.count - 5;
 
     if (process_framecnt > 0)
     {
