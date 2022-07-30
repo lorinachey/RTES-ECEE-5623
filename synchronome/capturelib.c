@@ -474,6 +474,7 @@ int seq_frame_process(void)
 {
     int cnt, diff;
     int max_sum = HRES * VRES * 255;
+    int prev_diff_threshold = 10000;
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
@@ -483,10 +484,11 @@ int seq_frame_process(void)
     printf("Diff computed: %d\n", diff);
 
     if (diff > DIFF_THRESHOLD && diff != previous_difference) {
+    // if (diff > DIFF_THRESHOLD && (abs(diff - previous_difference) > prev_diff_threshold)) {
         printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
-        previous_difference = diff;
     }
+    previous_difference = diff;
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
     rb_frame_acq.count = rb_frame_acq.count - 5;
@@ -539,14 +541,15 @@ int seq_frame_store(void)
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
         rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
         rb_frame_store.count--;
+
+        if (save_framecnt > 0)
+        {
+            clock_gettime(CLOCK_MONOTONIC, &time_now);
+            fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
+            syslog(LOG_CRIT, "RTES saved frame %lf, @ %lf FPS\n", (fnow - fstart), (double)(process_framecnt + 1) / (fnow - fstart));
+        }
     }
 
-    if (save_framecnt > 0)
-    {
-        clock_gettime(CLOCK_MONOTONIC, &time_now);
-        fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
-        printf(" saved at %lf, @ %lf FPS\n", (fnow - fstart), (double)(process_framecnt + 1) / (fnow - fstart));
-    }
 
     return cnt;
 }
