@@ -45,6 +45,8 @@
 #define MAX_VRES (1080)
 #define MAX_PIXEL_SIZE (3)
 
+#define DIFF_THRESHOLD (37900000)
+
 #define HRES (640)
 #define VRES (480)
 #define PIXEL_SIZE (2)
@@ -103,6 +105,7 @@ struct ring_buffer_t
 };
 
 static struct ring_buffer_t rb_frame_acq;
+static struct ring_buffer_t rb_frame_store;
 
 static int camera_device_fd = -1;
 struct buffer *buffers;
@@ -508,6 +511,10 @@ Check that head index != tail index (this indicates only one image avaiable)
     diff = max_sum - get_image_sum_from_scratchpad();
     printf("Diff computed: %d\n", diff);
 
+    if (diff > DIFF_THRESHOLD) {
+        copy_image_from_scratchpad_to_frame_store_ring_buffer();
+    }
+
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
     rb_frame_acq.count = rb_frame_acq.count - 5;
 
@@ -519,6 +526,12 @@ Check that head index != tail index (this indicates only one image avaiable)
     }
 
     return cnt;
+}
+
+void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
+    memcpy((void *)&(rb_frame_store.save_frame[rb_frame_store.head_idx].frame[0]), scratchpad_buffer, (MAX_HRES * MAX_VRES * MAX_PIXEL_SIZE));
+    rb_frame_store.head_idx = (rb_frame_store.head_idx + 1) % rb_frame_store.ring_size;
+    rb_frame_store.count++;
 }
 
 int get_image_sum_from_scratchpad() {
@@ -534,17 +547,17 @@ int get_image_sum_from_scratchpad() {
 
 // Used to compute the difference between two images
 // TODO: May not be necessary!
-int compute_scratchpad_buffer_difference() {
-    int i;
-    int difference = 0;
-    int loop_count = HRES * VRES * PIXEL_SIZE;
+// int compute_scratchpad_buffer_difference() {
+//     int i;
+//     int difference = 0;
+//     int loop_count = HRES * VRES * PIXEL_SIZE;
 
-    for (i = 0; i < loop_count; i++) {
-        difference = difference + abs(scratchpad_buffer[i] - scratchpad_buffer_prev_image[i]);
-    }
+//     for (i = 0; i < loop_count; i++) {
+//         difference = difference + abs(scratchpad_buffer[i] - scratchpad_buffer_prev_image[i]);
+//     }
 
-    return difference;
-}
+//     return difference;
+// }
 
 // TODO: UPDATE THIS METHOD TO NOT SAVE EVERYTHING IN THE SCRATCHPAD BUFFER
 /**
@@ -556,7 +569,10 @@ int seq_frame_store(void)
 {
     int cnt;
 
-    cnt = save_image(scratchpad_buffer, HRES * VRES * PIXEL_SIZE, &time_now);
+    cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
+    rb_frame_store.head_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
+    rb_frame_store.count--;
+
     printf("save_framecnt=%d ", save_framecnt);
 
     if (save_framecnt > 0)
@@ -637,6 +653,11 @@ static void init_mmap(char *dev_name)
     rb_frame_acq.head_idx = 0;
     rb_frame_acq.count = 0;
     rb_frame_acq.ring_size = 3 * FRAMES_PER_SEC;
+
+    rb_frame_store.tail_idx = 0;
+    rb_frame_store.head_idx = 0;
+    rb_frame_store.count = 0;
+    rb_frame_store.ring_size = 3 * FRAMES_PER_SEC;
 
     if (-1 == xioctl(camera_device_fd, VIDIOC_REQBUFS, &req))
     {
