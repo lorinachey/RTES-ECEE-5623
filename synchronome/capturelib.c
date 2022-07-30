@@ -37,6 +37,8 @@
 
 #include <time.h>
 
+#define SYS_LOG_TAG "RTES1"
+
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
 #define MAX_HRES (1920)
@@ -469,6 +471,7 @@ int seq_frame_process(void)
 Check that head index != tail index (this indicates only one image avaiable)
     call process_image on previous image (pointed to by tail)
     call process_image on current image (pointed to by head)
+    ALTERNATIVELY: Compare to a max buffer diff => HRES * VRES * 255
     *process_image will update the scratch_padbuffers accordingly* TODO: add boolean to process_image method    
     now we should be able to compute the difference between the two scratchpad buffers
     log the total difference value with a timestamp
@@ -476,16 +479,17 @@ Check that head index != tail index (this indicates only one image avaiable)
 
 */
     int cnt, diff;
+    int max_sum = HRES * VRES * 255
 
-    // printf("processing rb.tail=%d, rb.head=%d, rb.count=%d\n", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
-
+    printf("processing rb.tail=%d, rb.head=%d, rb.count=%d\n", ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count);
+/**
     if (rb_frame_acq.head_idx != rb_frame_acq.tail_idx) {
         printf("HEAD NOT EQUAL TAIL\n");
         printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
 
-        // Store the previous image in a scratchpad_buffer after processing
+        // METHOD 1: Store the previous image in a scratchpad_buffer after processing
         // TODO: does this need to use tail_idx instead of head_idx
-        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
+        // cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
 
         rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
@@ -497,7 +501,17 @@ Check that head index != tail index (this indicates only one image avaiable)
         rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
         rb_frame_acq.count = rb_frame_acq.count - 5;
     }
+*/
 
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
+
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+
+        diff = max_sum - get_image_sum_from_scratchpad();
+        printf("Diff computed: %d\n", diff);
+
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 5;
 
     if (process_framecnt > 0)
     {
@@ -509,6 +523,19 @@ Check that head index != tail index (this indicates only one image avaiable)
     return cnt;
 }
 
+int get_image_sum_from_scratchpad() {
+    int diff = 0;
+    int loop_count = HRES * VRES * PIXEL_SIZE;
+
+    for (int i = 0; i < loop_count; i++) {
+        diff = diff + scratchpad_buffer[i];
+    }
+
+    return diff;
+}
+
+// Used to compute the difference between two images
+// TODO: May not be necessary!
 int compute_scratchpad_buffer_difference() {
     int i;
     int difference = 0;

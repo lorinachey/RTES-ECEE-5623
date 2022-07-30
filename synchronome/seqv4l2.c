@@ -36,6 +36,8 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 
 #include <signal.h>
 
+#define SYS_LOG_TAG "RTES1"
+
 #define USEC_PER_MSEC (1000)
 #define NANOSEC_PER_MSEC (1000000)
 #define NANOSEC_PER_SEC (1000000000)
@@ -90,7 +92,6 @@ void print_scheduler(void);
 
 int v4l2_frame_acquisition_initialization(char *dev_name);
 int v4l2_frame_acquisition_shutdown(void);
-// int v4l2_frame_acquisition_loop(char *dev_name);
 
 void main(void)
 {
