@@ -483,8 +483,11 @@ int seq_frame_process(void)
     diff = max_sum - get_image_sum_from_scratchpad();
     printf("Diff computed: %d\n", diff);
 
-    if (diff > DIFF_THRESHOLD && diff != previous_difference) {
-    // if (diff > DIFF_THRESHOLD && (abs(diff - previous_difference) > prev_diff_threshold)) {
+    // Method 1: (was not successful at preventing duplicates)
+    // if (diff > DIFF_THRESHOLD && diff != previous_difference) {
+
+    // Method 2:
+    if (diff > DIFF_THRESHOLD && (abs(diff - previous_difference) > prev_diff_threshold)) {
         printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
     }
