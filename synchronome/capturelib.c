@@ -281,7 +281,7 @@ static int save_image(const void *p, int size, struct timespec *frame_time)
     unsigned char *frame_ptr = (unsigned char *)p;
 
     save_framecnt++;
-    printf("save frame %d: ", save_framecnt);
+    printf("save frame %d: \n", save_framecnt);
 
 #ifdef DUMP_FRAMES
 
@@ -573,7 +573,7 @@ int seq_frame_store(void)
     printf("Attempting to save image in seq_frame_store\n");
 
     cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
-    rb_frame_store.head_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
+    rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
     rb_frame_store.count--;
 
     printf("save_framecnt=%d ", save_framecnt);
