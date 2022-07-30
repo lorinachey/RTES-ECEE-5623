@@ -512,6 +512,7 @@ Check that head index != tail index (this indicates only one image avaiable)
     printf("Diff computed: %d\n", diff);
 
     if (diff > DIFF_THRESHOLD) {
+        printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
     }
 
@@ -529,24 +530,21 @@ Check that head index != tail index (this indicates only one image avaiable)
 }
 
 void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
-    printf("Before memcpy operation in copy image from scratchpad to frame store");
-
     memcpy((void *)&(rb_frame_store.save_frame[rb_frame_store.head_idx].frame[0]), scratchpad_buffer, (MAX_HRES * MAX_VRES * MAX_PIXEL_SIZE));
+    printf("After memcpy operation in copy image from scratchpad to frame store\n");
+
     rb_frame_store.head_idx = (rb_frame_store.head_idx + 1) % rb_frame_store.ring_size;
-    rb_frame_store.count++;
+    
+    .count++;
 }
 
 int get_image_sum_from_scratchpad() {
     int diff = 0;
     int loop_count = HRES * VRES * PIXEL_SIZE;
 
-    printf("Before loop in get image sum from scratchpad");
-
     for (int i = 0; i < loop_count; i++) {
         diff = diff + scratchpad_buffer[i];
     }
-
-    printf("After loop in get image sum from scratchpad");
 
     return diff;
 }
@@ -574,6 +572,7 @@ int get_image_sum_from_scratchpad() {
 int seq_frame_store(void)
 {
     int cnt;
+    printf("Attempting to save image in seq_frame_store\n");
 
     cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
     rb_frame_store.head_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
