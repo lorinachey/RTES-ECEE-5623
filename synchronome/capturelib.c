@@ -529,6 +529,8 @@ Check that head index != tail index (this indicates only one image avaiable)
 }
 
 void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
+    printf("Before memcpy operation in copy image from scratchpad to frame store");
+
     memcpy((void *)&(rb_frame_store.save_frame[rb_frame_store.head_idx].frame[0]), scratchpad_buffer, (MAX_HRES * MAX_VRES * MAX_PIXEL_SIZE));
     rb_frame_store.head_idx = (rb_frame_store.head_idx + 1) % rb_frame_store.ring_size;
     rb_frame_store.count++;
@@ -538,9 +540,13 @@ int get_image_sum_from_scratchpad() {
     int diff = 0;
     int loop_count = HRES * VRES * PIXEL_SIZE;
 
+    printf("Before loop in get image sum from scratchpad");
+
     for (int i = 0; i < loop_count; i++) {
         diff = diff + scratchpad_buffer[i];
     }
+
+    printf("After loop in get image sum from scratchpad");
 
     return diff;
 }
