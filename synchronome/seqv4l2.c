@@ -44,6 +44,7 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 #define NUM_CPU_CORES (4)
 #define TRUE (1)
 #define FALSE (0)
+#define MAX_SQN_CNT (3000)
 
 #define RT_CORE (2)
 #define FRAME_ACQ_CORE (3)
@@ -362,7 +363,7 @@ void *Service_1_frame_acquisition(void *threadp)
         current_realtime = realtime(&current_time_val);
         syslog(LOG_CRIT, "RTES S1 at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
-        if (S1Cnt > 250)
+        if (S1Cnt > MAX_SQN_CNT)
         {
             abortTest = TRUE;
         };
@@ -430,7 +431,7 @@ void *Service_3_frame_storage(void *threadp)
         syslog(LOG_CRIT, "RTES S3 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
-        if (store_cnt == 60)
+        if (store_cnt == MAX_SQN_CNT)
         {
             abortTest = TRUE;
         };
