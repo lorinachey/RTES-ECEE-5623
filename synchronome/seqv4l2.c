@@ -257,20 +257,12 @@ void main(void)
     else
         printf("pthread_create successful for service 3\n");
 
-    // Wait for service threads to initialize and await relese by sequencer.
-    //
-    // Note that the sleep is not necessary of RT service threads are created with
-    // correct POSIX SCHED_FIFO priorities compared to non-RT priority of this main
-    // program.
-    //
-    // sleep(1);
-
     // Create Sequencer thread, which like a cyclic executive, is highest prio
     printf("Start sequencer\n");
 
-    // Sequencer = RT_MAX	@ 100 Hz
-    //
-    /* set up to signal SIGALRM if timer expires */
+    /** Sequencer = RT_MAX	@ 100 Hz
+     *  set up to signal SIGALRM if timer expires
+     */
     timer_create(CLOCK_REALTIME, NULL, &timer_1);
 
     signal(SIGALRM, (void (*)())Sequencer);

@@ -442,7 +442,6 @@ int seq_frame_read(void)
     read_frame();
 
     // save off copy of image with time-stamp here
-    // printf("memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
 
@@ -462,6 +461,9 @@ int seq_frame_read(void)
         errno_exit("VIDIOC_QBUF");
 }
 
+// TODO: revisit using this variable
+int previous_difference = 0;
+
 /**
  * @brief Compare each image in the frame acquisition ring buffer. Determine if the difference after processing
  *        is above a threshold for image quality. If it is, add that image to the dedicated storage ring buffer.
@@ -470,39 +472,8 @@ int seq_frame_read(void)
  */
 int seq_frame_process(void)
 {
-/**
-Check that head index != tail index (this indicates only one image avaiable)
-    call process_image on previous image (pointed to by tail)
-    call process_image on current image (pointed to by head)
-    ALTERNATIVELY: Compare to a max buffer diff => HRES * VRES * 255
-    *process_image will update the scratch_padbuffers accordingly* TODO: add boolean to process_image method    
-    now we should be able to compute the difference between the two scratchpad buffers
-    log the total difference value with a timestamp
-    compare the values to the images saved to determine what to set the difference threshold to
-
-    if (rb_frame_acq.head_idx != rb_frame_acq.tail_idx) {
-        printf("HEAD NOT EQUAL TAIL\n");
-        printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
-
-        // METHOD 1: Store the previous image in a scratchpad_buffer after processing
-        // TODO: does this need to use tail_idx instead of head_idx
-        // cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
-
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
-
-        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
-
-        diff = compute_scratchpad_buffer_difference();
-        printf("Diff computed: %d\n", diff);
-
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
-        rb_frame_acq.count = rb_frame_acq.count - 5;
-    }
-*/
     int cnt, diff;
     int max_sum = HRES * VRES * 255;
-
-    //printf("rb.tail=%d, rb.head=%d, rb.count=%d \n", rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
@@ -511,9 +482,10 @@ Check that head index != tail index (this indicates only one image avaiable)
     diff = max_sum - get_image_sum_from_scratchpad();
     printf("Diff computed: %d\n", diff);
 
-    if (diff > DIFF_THRESHOLD) {
+    if (diff > DIFF_THRESHOLD && diff != previous_difference) {
         printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
+        previous_difference = diff;
     }
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
@@ -528,12 +500,20 @@ Check that head index != tail index (this indicates only one image avaiable)
     return cnt;
 }
 
+/**
+ * @brief Copy the image from the scratchpad to the ring buffer for storing to flash
+ */
 void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
     memcpy((void *)&(rb_frame_store.save_frame[rb_frame_store.head_idx].frame[0]), scratchpad_buffer, (HRES * VRES * PIXEL_SIZE));
     rb_frame_store.head_idx = (rb_frame_store.head_idx + 1) % rb_frame_store.ring_size;
     rb_frame_store.count++;
 }
 
+/**
+ * @brief Get the image sum from scratchpad buffer where the processed imaged is stored
+ * 
+ * @return int 
+ */
 int get_image_sum_from_scratchpad() {
     int diff = 0;
     int loop_count = HRES * VRES * PIXEL_SIZE;
@@ -547,12 +527,13 @@ int get_image_sum_from_scratchpad() {
 
 /**
  * @brief Save an image from the frame store ring buffer and update the ring buffer accordingly.
+ *        Only store from the ring buffer if the frame store count is non-zero.
  * 
  * @return int 
  */
 int seq_frame_store(void)
 {
-    int cnt;
+    int cnt = 0;
 
     if (rb_frame_store.count > 0) {
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
