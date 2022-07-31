@@ -479,30 +479,32 @@ int seq_frame_process(void)
 {
     int cnt, diff;
     int max_sum = HRES * VRES * 255;
-    int prev_diff_threshold = 8000;
+    int prev_diff_threshold = 7500;
 
-    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
+    if (read_framecnt > 0) {
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
 
-    cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-    diff = max_sum - get_image_sum_from_scratchpad();
-    //printf("Diff computed: %d\n", diff);
-    syslog(LOG_CRIT, "%s difference: %d previous_difference: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, previous_difference, prev_diff_threshold);
+        diff = max_sum - get_image_sum_from_scratchpad();
 
-    // Method 2:
-    if ((abs(diff - previous_difference) > prev_diff_threshold)) {
-        // printf("Diff exceeds threshold. Attempting to save\n");
-        copy_image_from_scratchpad_to_frame_store_ring_buffer();
-        previous_difference = diff;
-    }
+        syslog(LOG_CRIT, "%s difference: %d previous_difference: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, previous_difference, prev_diff_threshold);
 
-    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
-    rb_frame_acq.count = rb_frame_acq.count - 5;
+        // Method 2:
+        if ((abs(diff - previous_difference) > prev_diff_threshold)) {
+            // printf("Diff exceeds threshold. Attempting to save\n");
+            copy_image_from_scratchpad_to_frame_store_ring_buffer();
+            previous_difference = diff;
+        }
 
-    if (process_framecnt > 0)
-    {
-        clock_gettime(CLOCK_MONOTONIC, &time_now);
-        fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 1;
+
+        if (process_framecnt > 0)
+        {
+            clock_gettime(CLOCK_MONOTONIC, &time_now);
+            fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+        }
     }
 
     return cnt;
