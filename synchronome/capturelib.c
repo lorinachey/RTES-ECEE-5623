@@ -490,8 +490,8 @@ int seq_frame_process(void)
     if ((abs(diff - previous_difference) > prev_diff_threshold)) {
         printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
+        previous_difference = diff;
     }
-    previous_difference = diff;
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
     rb_frame_acq.count = rb_frame_acq.count - 5;
