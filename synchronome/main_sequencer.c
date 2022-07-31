@@ -217,8 +217,6 @@ void main(void)
         }
     }
 
-    printf("Service threads will run on %d CPU cores\n", CPU_COUNT(&threadcpu));
-
     // Create Service threads which will block awaiting release for:
 
     // Servcie_1 = RT_MAX-1	@ 20 Hz
