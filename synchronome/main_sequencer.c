@@ -37,6 +37,9 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 #include <signal.h>
 
 #define SYS_LOG_TAG "RTES1"
+#define SYS_LOG_TAG_S1 "SERVICE1"
+#define SYS_LOG_TAG_S2 "SERVICE2"
+#define SYS_LOG_TAG_S3 "SERVICE3"
 
 #define USEC_PER_MSEC (1000)
 #define NANOSEC_PER_MSEC (1000000)
@@ -47,7 +50,7 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 #define MAX_SQN_CNT (3000)
 
 #define RT_CORE (2)
-#define FRAME_ACQ_CORE (3)
+#define FRAME_STORE_CORE (3)
 
 #define NUM_THREADS (3)
 
@@ -184,10 +187,10 @@ void main(void)
 
     for (i = 0; i < NUM_THREADS; i++)
     {
-        if (i == 0) {
-            // run the frame acquisition on it's own core
+        if (i == 2) {
+            // run the frame storage on it's own core
             CPU_ZERO(&threadcpu);
-            cpuidx = (FRAME_ACQ_CORE);
+            cpuidx = (FRAME_STORE_CORE);
             CPU_SET(cpuidx, &threadcpu);
 
             rc = pthread_attr_init(&rt_sched_attr[i]);
@@ -200,7 +203,7 @@ void main(void)
 
             threadParams[i].threadIdx = i;
         } else {
-            // run frame_proc and frame_store services on a separate core
+            // run frame_acq and frame_store services on a separate core
             CPU_ZERO(&threadcpu);
             cpuidx = (RT_CORE);
             CPU_SET(cpuidx, &threadcpu);
@@ -342,7 +345,7 @@ void *Service_1_frame_acquisition(void *threadp)
     // Start up processing and resource initialization
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "%d S1 thread @ sec= %6.9lf\n", SYS_LOG_TAG, current_realtime - start_realtime);
+    syslog(LOG_CRIT, "%d thread @ sec= %6.9lf\n", SYS_LOG_TAG_S1, current_realtime - start_realtime);
 
     while (!abortS1_frame_acq) // check for synchronous abort request
     {
@@ -359,7 +362,7 @@ void *Service_1_frame_acquisition(void *threadp)
         // on order of up to milliseconds of latency to get time
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s S1 at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         if (S1Cnt > MAX_SQN_CNT)
         {
@@ -381,7 +384,7 @@ void *Service_2_frame_process(void *threadp)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "%s S2 thread @ sec= %6.9lf\n", SYS_LOG_TAG, current_realtime - start_realtime);
+    syslog(LOG_CRIT, "%s thread @ sec= %6.9lf\n", SYS_LOG_TAG_S2, current_realtime - start_realtime);
 
     while (!abortS2_frame_proc)
     {
@@ -396,7 +399,7 @@ void *Service_2_frame_process(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s S2 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
     }
 
     pthread_exit((void *)0);
@@ -411,7 +414,7 @@ void *Service_3_frame_storage(void *threadp)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "%s S3 thread @ sec= %6.9lf\n", SYS_LOG_TAG, current_realtime - start_realtime);
+    syslog(LOG_CRIT, "%s thread @ sec= %6.9lf\n", SYS_LOG_TAG_S3, current_realtime - start_realtime);
 
     while (!abortS3_frame_store)
     {
@@ -426,7 +429,7 @@ void *Service_3_frame_storage(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s S3 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
         if (store_cnt == MAX_SQN_CNT)
