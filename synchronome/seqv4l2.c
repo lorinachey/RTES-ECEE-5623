@@ -246,7 +246,7 @@ void main(void)
     else
         printf("pthread_create successful for service 2\n");
 
-    // Service_3 = RT_MAX-3	@ 1 Hz
+    // Service_3 = RT_MAX-3	@ 2 Hz
     rt_param[2].sched_priority = rt_max_prio - 3;
     pthread_attr_setschedparam(&rt_sched_attr[2], &rt_param[2]);
     rc = pthread_create(&threads[2],
@@ -330,8 +330,8 @@ void Sequencer(int id)
     if ((seqCnt % 50) == 0)
         sem_post(&semS2_frame_proc);
 
-    // Service_3 - Frame Storage @ 1 Hz
-    if ((seqCnt % 100) == 0)
+    // Service_3 - Frame Storage @ 2 Hz
+    if ((seqCnt % 50) == 0)
         sem_post(&semS3_frame_store);
 }
 

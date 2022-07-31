@@ -474,7 +474,7 @@ int seq_frame_process(void)
 {
     int cnt, diff;
     int max_sum = HRES * VRES * 255;
-    int prev_diff_threshold = 10000;
+    int prev_diff_threshold = 8000;
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 2) % rb_frame_acq.ring_size;
 
