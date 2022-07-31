@@ -7,22 +7,22 @@ CFLAGS= -O0 -g $(INCLUDE_DIRS) $(CDEFS)
 LIBS= 
 
 HFILES= 
-CFILES= capturelib.c seqv4l2.c
+CFILES= image_capture_and_processing.c main_sequencer.c
 
 SRCS= ${HFILES} ${CFILES}
 OBJS= ${CFILES:.c=.o}
 
-all: seqv4l2
+all: main_sequencer
 
 clean:
 	-rm -f *.o *.d frames/*.pgm frames/*.ppm
-	-rm -f seqv4l2
+	-rm -f main_sequencer
 
-capture: capturelib.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $@.o capturelib.o -lrt
+capture: image_capture_and_processing.o
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $@.o image_capture_and_processing.o -lrt
 
-seqv4l2: seqv4l2.o capturelib.o
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $@.o capturelib.o -lpthread -lrt
+main_sequencer: main_sequencer.o image_capture_and_processing.o
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $@.o image_capture_and_processing.o -lpthread -lrt
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
