@@ -37,7 +37,12 @@
 
 #include <time.h>
 
-#define SYS_LOG_TAG "RTES1"
+#define SYS_LOG_TAG "RTES"
+#define SYS_LOG_TAG_SEQ_FRAME_READ "RTES Seq Frame Read"
+#define SYS_LOG_TAG_SEQ_FRAME_PROC "RTES Seq Frame Proc"
+#define SYS_LOG_TAG_SEQ_FRAME_STORE "RTES Seq Frame Store"
+
+#define NANOSEC_PER_SEC (1000000000.0)
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
@@ -162,7 +167,7 @@ static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec 
     } while (total < size);
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
-    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
+    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
     // printf("Frame written to flash at %lf, %d, bytes\n", (fnow - fstart), total);
 
     close(dumpfd);
@@ -196,7 +201,7 @@ static void dump_pgm(const void *p, int size, unsigned int tag, struct timespec 
     } while (total < size);
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
-    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
+    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
     // printf("Frame written to flash at %lf, %d, bytes\n", (fnow - fstart), total);
 
     close(dumpfd);
@@ -416,7 +421,7 @@ static int read_frame(void)
     if (read_framecnt == 0)
     {
         clock_gettime(CLOCK_MONOTONIC, &time_start);
-        fstart = (double)time_start.tv_sec + (double)time_start.tv_nsec / 1000000000.0;
+        fstart = (double)time_start.tv_sec + (double)time_start.tv_nsec / NANOSEC_PER_SEC;
     }
 
     assert(frame_buf.index < n_buffers);
@@ -449,7 +454,7 @@ int seq_frame_read(void)
     rb_frame_acq.count++;
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
-    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
+    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
 
     if (read_framecnt > 0)
     {
@@ -481,14 +486,12 @@ int seq_frame_process(void)
     cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
     diff = max_sum - get_image_sum_from_scratchpad();
-    printf("Diff computed: %d\n", diff);
-
-    // Method 1: (was not successful at preventing duplicates)
-    // if (diff > DIFF_THRESHOLD && diff != previous_difference) {
+    //printf("Diff computed: %d\n", diff);
+    syslog(LOG_CRIT, "%s difference: %d previous_difference: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, previous_difference, prev_diff_threshold);
 
     // Method 2:
     if ((abs(diff - previous_difference) > prev_diff_threshold)) {
-        printf("Diff exceeds threshold. Attempting to save\n");
+        // printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
         previous_difference = diff;
     }
@@ -499,7 +502,7 @@ int seq_frame_process(void)
     if (process_framecnt > 0)
     {
         clock_gettime(CLOCK_MONOTONIC, &time_now);
-        fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
+        fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
     }
 
     return cnt;
@@ -548,12 +551,10 @@ int seq_frame_store(void)
         if (save_framecnt > 0)
         {
             clock_gettime(CLOCK_MONOTONIC, &time_now);
-            fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / 1000000000.0;
-            syslog(LOG_CRIT, "RTES saved frame %lf, @ %lf FPS\n", (fnow - fstart), (double)(process_framecnt + 1) / (fnow - fstart));
+            fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+            syslog(LOG_CRIT, "%s saved frame %lf, @ %lf FPS\n", SYS_LOG_TAG_SEQ_FRAME_STORE, (fnow - fstart), (double)(process_framecnt + 1) / (fnow - fstart));
         }
     }
-
-
     return cnt;
 }
 
@@ -562,7 +563,7 @@ static void stop_capturing(void)
     enum v4l2_buf_type type;
 
     clock_gettime(CLOCK_MONOTONIC, &time_stop);
-    fstop = (double)time_stop.tv_sec + (double)time_stop.tv_nsec / 1000000000.0;
+    fstop = (double)time_stop.tv_sec + (double)time_stop.tv_nsec / NANOSEC_PER_SEC;
 
     type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 

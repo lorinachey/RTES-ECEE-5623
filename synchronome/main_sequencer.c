@@ -11,7 +11,7 @@ Example Sequencer:
 For the synchronome project, priorities by Rate Monotonic policy are changed to:
 
     Sequencer = RT_MAX	@ 100 Hz
-    Servcie_1_frame_acq   = RT_MAX-1	@ 20  Hz
+    Service_1_frame_acq   = RT_MAX-1	@ 20  Hz
     Service_2_frame_proc  = RT_MAX-2	@ 2   Hz
     Service_3_frame_store = RT_MAX-3	@ 2   Hz
 
@@ -130,7 +130,7 @@ void main(void)
     clock_getres(MY_CLOCK_TYPE, &current_time_res);
     current_realtime_res = realtime(&current_time_res);
     printf("START High Rate Sequencer @ sec= %6.9lf with resolution %6.9lf\n", (current_realtime - start_realtime), current_realtime_res);
-    syslog(LOG_CRIT, "RTES START High Rate Sequencer @ sec= %6.9lf with resolution %6.9lf\n", (current_realtime - start_realtime), current_realtime_res);
+    syslog(LOG_CRIT, "%d START High Rate Sequencer @ sec= %6.9lf with resolution %6.9lf\n", SYS_LOG_TAG,(current_realtime - start_realtime), current_realtime_res);
 
     printf("System has %d processors configured and %d available.\n", get_nprocs_conf(), get_nprocs());
 
@@ -342,7 +342,7 @@ void *Service_1_frame_acquisition(void *threadp)
     // Start up processing and resource initialization
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "RTES S1 thread @ sec= %6.9lf\n", current_realtime - start_realtime);
+    syslog(LOG_CRIT, "%d S1 thread @ sec= %6.9lf\n", SYS_LOG_TAG, current_realtime - start_realtime);
 
     while (!abortS1_frame_acq) // check for synchronous abort request
     {
@@ -359,7 +359,7 @@ void *Service_1_frame_acquisition(void *threadp)
         // on order of up to milliseconds of latency to get time
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "RTES S1 at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s S1 at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         if (S1Cnt > MAX_SQN_CNT)
         {
@@ -381,7 +381,7 @@ void *Service_2_frame_process(void *threadp)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "RTES S2 thread @ sec= %6.9lf\n", current_realtime - start_realtime);
+    syslog(LOG_CRIT, "%s S2 thread @ sec= %6.9lf\n", SYS_LOG_TAG, current_realtime - start_realtime);
 
     while (!abortS2_frame_proc)
     {
@@ -396,7 +396,7 @@ void *Service_2_frame_process(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "RTES S2 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s S2 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
     }
 
     pthread_exit((void *)0);
@@ -411,7 +411,7 @@ void *Service_3_frame_storage(void *threadp)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "RTES S3 thread @ sec= %6.9lf\n", current_realtime - start_realtime);
+    syslog(LOG_CRIT, "%s S3 thread @ sec= %6.9lf\n", SYS_LOG_TAG, current_realtime - start_realtime);
 
     while (!abortS3_frame_store)
     {
@@ -426,7 +426,7 @@ void *Service_3_frame_storage(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "RTES S3 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", sched_getcpu(), S3Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s S3 at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
         if (store_cnt == MAX_SQN_CNT)
