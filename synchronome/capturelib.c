@@ -487,7 +487,7 @@ int seq_frame_process(void)
     // if (diff > DIFF_THRESHOLD && diff != previous_difference) {
 
     // Method 2:
-    if (diff > DIFF_THRESHOLD && (abs(diff - previous_difference) > prev_diff_threshold)) {
+    if ((abs(diff - previous_difference) > prev_diff_threshold)) {
         printf("Diff exceeds threshold. Attempting to save\n");
         copy_image_from_scratchpad_to_frame_store_ring_buffer();
     }

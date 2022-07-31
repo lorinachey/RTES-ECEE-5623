@@ -246,7 +246,7 @@ void main(void)
     else
         printf("pthread_create successful for service 2\n");
 
-    // Service_3 = RT_MAX-3	@ 2 Hz
+    // Service_3 = RT_MAX-3	@ 1 Hz
     rt_param[2].sched_priority = rt_max_prio - 3;
     pthread_attr_setschedparam(&rt_sched_attr[2], &rt_param[2]);
     rc = pthread_create(&threads[2],
@@ -322,16 +322,16 @@ void Sequencer(int id)
     // syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
 
     // Release each service at a sub-rate of the generic sequencer rate which is set to run at 100Hz
-    // Servcie_1 @ 20 Hz
+    // Service_1 - Frame Acquisition @ 20 Hz
     if ((seqCnt % 5) == 0)
         sem_post(&semS1_frame_acq);
 
-    // Service_2 @ 2 Hz
+    // Service_2 - Frame Processing @ 2 Hz
     if ((seqCnt % 50) == 0)
         sem_post(&semS2_frame_proc);
 
-    // Service_3 @ 2 Hz
-    if ((seqCnt % 50) == 0)
+    // Service_3 - Frame Storage @ 1 Hz
+    if ((seqCnt % 100) == 0)
         sem_post(&semS3_frame_store);
 }
 
