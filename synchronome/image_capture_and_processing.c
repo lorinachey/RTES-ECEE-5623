@@ -63,9 +63,9 @@
 #define CAPTURE_FRAMES (300 + LAST_FRAMES)
 #define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
-#define FRAMES_PER_SEC (1)
+//#define FRAMES_PER_SEC (1)
 //#define FRAMES_PER_SEC (10)
-//#define FRAMES_PER_SEC (20)
+#define FRAMES_PER_SEC (20)
 //#define FRAMES_PER_SEC (25)
 //#define FRAMES_PER_SEC (30)
 
@@ -443,7 +443,7 @@ int seq_frame_read(void)
     // save off copy of image with time-stamp here
     // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-    syslog(LOG_CRIT, "%s saving to frame acq in head_idx %d \n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx);
+    syslog(LOG_CRIT, "%s saving to frame acq head_idx %d \n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx);
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
     rb_frame_acq.count++;
@@ -481,6 +481,9 @@ int seq_frame_process(void)
 
         int previous_tail_index = rb_frame_acq.tail_idx;
         rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+
+        syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, previous_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
+
         prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[previous_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
         cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
