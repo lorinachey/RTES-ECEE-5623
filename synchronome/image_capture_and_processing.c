@@ -474,10 +474,9 @@ int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
     int max_sum = HRES * VRES * 255;
-    int prev_diff_threshold = 0;
+    int diff_threshold = 190000;
 
     if (rb_frame_acq.count > 1 && read_framecnt > 0) {
-        // rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
 
         int previous_tail_index = rb_frame_acq.tail_idx;
         rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
@@ -487,24 +486,19 @@ int seq_frame_process(void)
         prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[previous_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
         cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-        rb_frame_acq.count = rb_frame_acq.count - 1;
-
-        // Old method using difference of sums
-        // diff = max_sum - get_image_sum_from_scratchpad();
-        // syslog(LOG_CRIT, "%s difference: %d previous_difference: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, previous_difference, prev_diff_threshold);
-
         // Method 2: Using difference of pixels between current and previous image
         diff = get_difference_of_current_and_prev_images();
-        printf("Diff: %d threshold set to: %d: \n", diff, prev_diff_threshold);
-        syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, prev_diff_threshold);
+        syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
 
-        if (diff >= prev_diff_threshold) {
+        if (diff >= diff_threshold) {
             // printf("Diff exceeds threshold. Attempting to save\n");
             // previous_difference = diff;
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
         }
 
-        // rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
+        // Move the tail index multiple images along to prevent it from getting too far behind
+        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 5) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 5;
 
         if (process_framecnt > 0)
         {
