@@ -498,7 +498,7 @@ int seq_frame_process(void)
         printf("Diff: %d threshold set to: %d: \n", diff, prev_diff_threshold);
         syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, prev_diff_threshold);
 
-        if (diff > prev_diff_threshold) {
+        if (diff >= prev_diff_threshold) {
             // printf("Diff exceeds threshold. Attempting to save\n");
             // previous_difference = diff;
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
@@ -535,7 +535,7 @@ int get_difference_of_current_and_prev_images() {
     int loop_count = HRES * VRES * PIXEL_SIZE;
 
     for (int i = 0; i < loop_count; i++) {
-        diff = abs(scratchpad_buffer_prev_image[i] - scratchpad_buffer[i]);
+        diff = diff + abs(scratchpad_buffer_prev_image[i] - scratchpad_buffer[i]);
     }
 
     return diff;
