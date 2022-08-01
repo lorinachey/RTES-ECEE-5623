@@ -58,14 +58,14 @@
 #define HRES_STR "640"
 #define VRES_STR "480"
 
-#define STARTUP_FRAMES (30)
+#define STARTUP_FRAMES (40)
 #define LAST_FRAMES (1)
 #define CAPTURE_FRAMES (300 + LAST_FRAMES)
 #define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
 //#define FRAMES_PER_SEC (1)
-//#define FRAMES_PER_SEC (10)
-#define FRAMES_PER_SEC (20)
+#define FRAMES_PER_SEC (10)
+//#define FRAMES_PER_SEC (20)
 //#define FRAMES_PER_SEC (25)
 //#define FRAMES_PER_SEC (30)
 
@@ -473,10 +473,9 @@ int previous_difference = 0;
 int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
-    int max_sum = HRES * VRES * 255;
-    int diff_threshold = 190000;
+    int diff_threshold = 193000;
 
-    if (rb_frame_acq.count > 1 && read_framecnt > 0) {
+    if (read_framecnt > 0) {
 
         int previous_tail_index = rb_frame_acq.tail_idx;
         rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
@@ -486,19 +485,21 @@ int seq_frame_process(void)
         prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[previous_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
         cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-        // Method 2: Using difference of pixels between current and previous image
         diff = get_difference_of_current_and_prev_images();
         syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
 
         if (diff >= diff_threshold) {
-            // printf("Diff exceeds threshold. Attempting to save\n");
-            // previous_difference = diff;
+            // We've found a viable image so right it to 
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
-        }
 
-        // Move the tail index multiple images along to prevent it from getting too far behind
-        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 5) % rb_frame_acq.ring_size;
-        rb_frame_acq.count = rb_frame_acq.count - 5;
+            // Move the tail index multiple images along to prevent it from getting too far behind
+            rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 5) % rb_frame_acq.ring_size;
+            rb_frame_acq.count = rb_frame_acq.count - 5;
+        } else {
+            // Move the tail index once to try to get the right image
+            rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+            rb_frame_acq.count = rb_frame_acq.count - 1;
+        }
 
         if (process_framecnt > 0)
         {
@@ -536,22 +537,6 @@ int get_difference_of_current_and_prev_images() {
 }
 
 /**
- * @brief Get the image sum from scratchpad buffer where the processed imaged is stored
- * 
- * @return int 
- */
-int get_image_sum_from_scratchpad() {
-    int diff = 0;
-    int loop_count = HRES * VRES * PIXEL_SIZE;
-
-    for (int i = 0; i < loop_count; i++) {
-        diff = diff + scratchpad_buffer[i];
-    }
-
-    return diff;
-}
-
-/**
  * @brief Save an image from the frame store ring buffer and update the ring buffer accordingly.
  *        Only store from the ring buffer if the frame store count is non-zero.
  * 
@@ -562,6 +547,7 @@ int seq_frame_store(void)
     int cnt = 0;
 
     if (rb_frame_store.count > 0) {
+        syslog(LOG_CRIT, "%s saving from RB store: tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.tail_idx);
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
         rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
         rb_frame_store.count--;
@@ -570,7 +556,7 @@ int seq_frame_store(void)
         {
             clock_gettime(CLOCK_MONOTONIC, &time_now);
             fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
-            syslog(LOG_CRIT, "%s saved frame %lf, @ %lf FPS\n", SYS_LOG_TAG_SEQ_FRAME_STORE, (fnow - fstart), (double)(process_framecnt + 1) / (fnow - fstart));
+            syslog(LOG_CRIT, "%s saved frame %lf, @ %lf FPS\n", SYS_LOG_TAG_SEQ_FRAME_STORE, (fnow - fstart), (double)(save_framecnt + 1) / (fnow - fstart));
         }
     }
     return cnt;
