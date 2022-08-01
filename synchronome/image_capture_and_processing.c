@@ -58,12 +58,6 @@
 #define HRES_STR "640"
 #define VRES_STR "480"
 
-//#define HRES (320)
-//#define VRES (240)
-//#define PIXEL_SIZE (2)
-//#define HRES_STR "320"
-//#define VRES_STR "240"
-
 #define STARTUP_FRAMES (30)
 #define LAST_FRAMES (1)
 #define CAPTURE_FRAMES (300 + LAST_FRAMES)
@@ -336,7 +330,7 @@ static int process_image(const void *p, int size, int is_previous_image)
     unsigned char *frame_ptr = (unsigned char *)p;
 
     process_framecnt++;
-    printf("process frame %d: ", process_framecnt);
+    printf("process frame %d: \n", process_framecnt);
 
     if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_GREY)
     {
@@ -477,27 +471,32 @@ int previous_difference = 0;
  */
 int seq_frame_process(void)
 {
-    int cnt, diff;
+    int cnt, diff, prev_cnt;
     int max_sum = HRES * VRES * 255;
-    int prev_diff_threshold = 7500;
+    int prev_diff_threshold = 5;
 
     if (read_framecnt > 0) {
         rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
 
+        prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
         cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-        diff = max_sum - get_image_sum_from_scratchpad();
+        // Old method using difference of sums
+        // diff = max_sum - get_image_sum_from_scratchpad();
+        // syslog(LOG_CRIT, "%s difference: %d previous_difference: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, previous_difference, prev_diff_threshold);
 
-        syslog(LOG_CRIT, "%s difference: %d previous_difference: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, previous_difference, prev_diff_threshold);
+        // Method 2: Using difference of pixels between current and previous image
+        diff = get_difference_of_current_and_prev_images();
+        printf("Diff: %d threshold set to: %d: \n", diff, prev_diff_threshold);
+        syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, prev_diff_threshold);
 
-        // Method 2:
-        if ((abs(diff - previous_difference) > prev_diff_threshold)) {
+        if (diff > prev_diff_threshold) {
             // printf("Diff exceeds threshold. Attempting to save\n");
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
             previous_difference = diff;
         }
 
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 3) % rb_frame_acq.ring_size;
+        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
         rb_frame_acq.count = rb_frame_acq.count - 1;
 
         if (process_framecnt > 0)
@@ -517,6 +516,22 @@ void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
     memcpy((void *)&(rb_frame_store.save_frame[rb_frame_store.head_idx].frame[0]), scratchpad_buffer, (HRES * VRES * PIXEL_SIZE));
     rb_frame_store.head_idx = (rb_frame_store.head_idx + 1) % rb_frame_store.ring_size;
     rb_frame_store.count++;
+}
+
+/**
+ * @brief Get the difference of current and prev image pixels
+ * 
+ * @return int 
+ */
+int get_difference_of_current_and_prev_images() {
+    int diff = 0;
+    int loop_count = HRES * VRES * PIXEL_SIZE;
+
+    for (int i = 0; i < loop_count; i++) {
+        diff = abs(scratchpad_buffer_prev_image[i] - scratchpad_buffer[i]);
+    }
+
+    return diff;
 }
 
 /**
