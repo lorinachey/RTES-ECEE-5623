@@ -442,9 +442,10 @@ int seq_frame_read(void)
 
     // save off copy of image with time-stamp here
     // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-    memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
+    memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
+    syslog(LOG_CRIT, "%s saving to frame acq in head_idx %d \n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx);
 
-    rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+    rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
     rb_frame_acq.count++;
 
     clock_gettime(CLOCK_MONOTONIC, &time_now);
@@ -453,7 +454,7 @@ int seq_frame_read(void)
     if (read_framecnt > 0)
     {
         // syslog(LOG_CRIT, "read_framecnt=%d, rb.tail=%d, rb.head=%d, rb.count=%d at %lf and %lf FPS", read_framecnt, ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count, (fnow-fstart), (double)(read_framecnt) / (fnow-fstart));
-        syslog(LOG_CRIT, "RTES read_framecnt=%d at %lf and %lf FPS", read_framecnt, (fnow - fstart), (double)(read_framecnt) / (fnow - fstart));
+        syslog(LOG_CRIT, "%d read_framecnt=%d at %lf and %lf FPS", SYS_LOG_TAG_SEQ_FRAME_READ, read_framecnt, (fnow - fstart), (double)(read_framecnt) / (fnow - fstart));
     }
 
     if (-1 == xioctl(camera_device_fd, VIDIOC_QBUF, &frame_buf))
@@ -473,13 +474,17 @@ int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
     int max_sum = HRES * VRES * 255;
-    int prev_diff_threshold = 5;
+    int prev_diff_threshold = 0;
 
-    if (read_framecnt > 0) {
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
+    if (rb_frame_acq.count > 1 && read_framecnt > 0) {
+        // rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
 
-        prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
-        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+        int previous_tail_index = rb_frame_acq.tail_idx;
+        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+        prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[previous_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+
+        rb_frame_acq.count = rb_frame_acq.count - 1;
 
         // Old method using difference of sums
         // diff = max_sum - get_image_sum_from_scratchpad();
@@ -492,12 +497,11 @@ int seq_frame_process(void)
 
         if (diff > prev_diff_threshold) {
             // printf("Diff exceeds threshold. Attempting to save\n");
+            // previous_difference = diff;
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
-            previous_difference = diff;
         }
 
-        rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
-        rb_frame_acq.count = rb_frame_acq.count - 1;
+        // rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
 
         if (process_framecnt > 0)
         {
