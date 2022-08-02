@@ -58,7 +58,7 @@
 #define HRES_STR "640"
 #define VRES_STR "480"
 
-#define STARTUP_FRAMES (40)
+#define STARTUP_FRAMES (30)
 #define LAST_FRAMES (1)
 #define CAPTURE_FRAMES (300 + LAST_FRAMES)
 #define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
@@ -472,7 +472,7 @@ int seq_frame_process(void)
     int cnt, diff, prev_cnt;
     int diff_threshold = 193000;
 
-    if (read_framecnt > 0) {
+    if (rb_frame_acq.count > STARTUP_FRAMES) {
 
         int previous_tail_index = rb_frame_acq.tail_idx;
         rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
@@ -491,7 +491,7 @@ int seq_frame_process(void)
         }
 
         // Move the tail index once to try to get the right image
-        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+        // rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
         rb_frame_acq.count = rb_frame_acq.count - 1;
 
         if (process_framecnt > 0)
