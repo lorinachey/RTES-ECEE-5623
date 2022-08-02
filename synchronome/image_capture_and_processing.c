@@ -443,7 +443,7 @@ int seq_frame_read(void)
     // save off copy of image with time-stamp here
     // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-    syslog(LOG_CRIT, "%s saving to frame acq head_idx %d \n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx);
+    syslog(LOG_CRIT, "%s RB frame acq head_idx: %d tail_idx: %d\n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx, rb_frame_acq.tail_idx);
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
     rb_frame_acq.count++;
@@ -485,7 +485,7 @@ int seq_frame_process(void)
         diff = get_difference_of_current_and_prev_images();
         syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
 
-        if (diff >= diff_threshold) {
+        if (diff > diff_threshold) {
             // We've found a viable image so right it to 
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
         }
@@ -539,9 +539,9 @@ int seq_frame_store(void)
 {
     int cnt = 0;
 
-    syslog(LOG_CRIT, "%s RBFS count: %d head_idx: %d tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count, rb_frame_store.head_idx, rb_frame_store.tail_idx);
     if (rb_frame_store.count > 0) {
-        syslog(LOG_CRIT, "%s saving from RB store: tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.tail_idx);
+        syslog(LOG_CRIT, "%s RBFS count: %d head_idx: %d tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count, rb_frame_store.head_idx, rb_frame_store.tail_idx);
+        //syslog(LOG_CRIT, "%s saving from RB store: tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.tail_idx);
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
         rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
         rb_frame_store.count--;
