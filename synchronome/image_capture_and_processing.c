@@ -493,8 +493,8 @@ int seq_frame_process(void)
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
 
             // Move the tail index multiple images along to prevent it from getting too far behind
-            rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 5) % rb_frame_acq.ring_size;
-            rb_frame_acq.count = rb_frame_acq.count - 5;
+            rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 2) % rb_frame_acq.ring_size;
+            rb_frame_acq.count = rb_frame_acq.count - 2;
         } else {
             // Move the tail index once to try to get the right image
             rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
