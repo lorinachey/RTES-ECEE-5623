@@ -313,7 +313,7 @@ void Sequencer(int id)
         abortS3_frame_store = TRUE;
         sem_post(&semS1_frame_acq);
         sem_post(&semS2_frame_proc);
-        sem_post(&semS3_frame_store);
+        //sem_post(&semS3_frame_store);
     }
 
     seqCnt++;
@@ -332,8 +332,8 @@ void Sequencer(int id)
         sem_post(&semS2_frame_proc);
 
     // Service_3 - Frame Storage @ 2 Hz
-    if ((seqCnt % 50) == 0)
-        sem_post(&semS3_frame_store);
+    // if ((seqCnt % 50) == 0)
+    //     sem_post(&semS3_frame_store);
 }
 
 void *Service_1_frame_acquisition(void *threadp)
@@ -418,7 +418,7 @@ void *Service_3_frame_storage(void *threadp)
 
     while (!abortS3_frame_store)
     {
-        sem_wait(&semS3_frame_store);
+        //sem_wait(&semS3_frame_store);
 
         if (abortS3_frame_store)
             break;
@@ -429,7 +429,7 @@ void *Service_3_frame_storage(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s BEST EFFORT on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
         if (store_cnt == MAX_SQN_CNT)

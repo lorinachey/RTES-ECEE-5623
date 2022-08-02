@@ -461,9 +461,6 @@ int seq_frame_read(void)
         errno_exit("VIDIOC_QBUF");
 }
 
-// TODO: revisit using this variable
-int previous_difference = 0;
-
 /**
  * @brief Compare each image in the frame acquisition ring buffer. Determine if the difference after processing
  *        is above a threshold for image quality. If it is, add that image to the dedicated storage ring buffer.
@@ -491,15 +488,11 @@ int seq_frame_process(void)
         if (diff >= diff_threshold) {
             // We've found a viable image so right it to 
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
-
-            // Move the tail index multiple images along to prevent it from getting too far behind
-            rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 2) % rb_frame_acq.ring_size;
-            rb_frame_acq.count = rb_frame_acq.count - 2;
-        } else {
-            // Move the tail index once to try to get the right image
-            rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
-            rb_frame_acq.count = rb_frame_acq.count - 1;
         }
+
+        // Move the tail index once to try to get the right image
+        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 1;
 
         if (process_framecnt > 0)
         {
@@ -546,6 +539,7 @@ int seq_frame_store(void)
 {
     int cnt = 0;
 
+    syslog(LOG_CRIT, "%s RB frame store count: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count);
     if (rb_frame_store.count > 0) {
         syslog(LOG_CRIT, "%s saving from RB store: tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.tail_idx);
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
