@@ -222,7 +222,7 @@ void main(void)
 
     // Create Service threads which will block awaiting release for:
 
-    // Servcie_1 = RT_MAX-1	@ 20 Hz
+    // Servcie_1 = RT_MAX-1	@ 10 Hz
     rt_param[0].sched_priority = rt_max_prio - 1;
     pthread_attr_setschedparam(&rt_sched_attr[0], &rt_param[0]);
     rc = pthread_create(&threads[0],                                // pointer to thread descriptor
@@ -323,8 +323,8 @@ void Sequencer(int id)
     // syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
 
     // Release each service at a sub-rate of the generic sequencer rate which is set to run at 100Hz
-    // Service_1 - Frame Acquisition @ 20 Hz
-    if ((seqCnt % 5) == 0)
+    // Service_1 - Frame Acquisition @ 10 Hz
+    if ((seqCnt % 10) == 0)
         sem_post(&semS1_frame_acq);
 
     // Service_2 - Frame Processing @ 2 Hz
@@ -362,7 +362,7 @@ void *Service_1_frame_acquisition(void *threadp)
         // on order of up to milliseconds of latency to get time
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 10 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         if (S1Cnt > MAX_SQN_CNT)
         {
