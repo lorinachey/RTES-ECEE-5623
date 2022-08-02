@@ -63,8 +63,8 @@
 #define CAPTURE_FRAMES (300 + LAST_FRAMES)
 #define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
-//#define FRAMES_PER_SEC (1)
-#define FRAMES_PER_SEC (10)
+#define FRAMES_PER_SEC (1)
+//#define FRAMES_PER_SEC (10)
 //#define FRAMES_PER_SEC (20)
 //#define FRAMES_PER_SEC (25)
 //#define FRAMES_PER_SEC (30)
@@ -100,7 +100,7 @@ struct ring_buffer_t
     int head_idx;
     int count;
 
-    struct save_frame_t save_frame[3 * FRAMES_PER_SEC];
+    struct save_frame_t save_frame[5 * FRAMES_PER_SEC];
 };
 
 static struct ring_buffer_t rb_frame_acq;
@@ -539,7 +539,7 @@ int seq_frame_store(void)
 {
     int cnt = 0;
 
-    syslog(LOG_CRIT, "%s RB frame store count: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count);
+    syslog(LOG_CRIT, "%s RBFS count: %d head_idx: %d tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count, rb_frame_store.head_idx, rb_frame_store.tail_idx);
     if (rb_frame_store.count > 0) {
         syslog(LOG_CRIT, "%s saving from RB store: tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.tail_idx);
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
@@ -623,12 +623,12 @@ static void init_mmap(char *dev_name)
     rb_frame_acq.tail_idx = 0;
     rb_frame_acq.head_idx = 0;
     rb_frame_acq.count = 0;
-    rb_frame_acq.ring_size = 3 * FRAMES_PER_SEC;
+    rb_frame_acq.ring_size = 5 * FRAMES_PER_SEC;
 
     rb_frame_store.tail_idx = 0;
     rb_frame_store.head_idx = 0;
     rb_frame_store.count = 0;
-    rb_frame_store.ring_size = 3 * FRAMES_PER_SEC;
+    rb_frame_store.ring_size = 5 * FRAMES_PER_SEC;
 
     if (-1 == xioctl(camera_device_fd, VIDIOC_REQBUFS, &req))
     {

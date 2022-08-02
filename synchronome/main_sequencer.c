@@ -251,7 +251,7 @@ void main(void)
     rt_param[2].sched_priority = rt_max_prio - 3;
     pthread_attr_setschedparam(&rt_sched_attr[2], &rt_param[2]);
     rc = pthread_create(&threads[2],
-                        &rt_sched_attr[2],
+                        (void *)0,                                // TODO: reevaluate - try using defaults
                         Service_3_frame_storage,
                         (void *)&(threadParams[2]));
     if (rc < 0)
