@@ -482,13 +482,15 @@ int seq_frame_process(void)
         prev_tail_index = (rb_frame_acq.tail_idx - 1);
     }
 
-    syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
+    //syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
 
     prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[prev_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
     cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
+    clock_gettime(CLOCK_MONOTONIC, &time_now);
+    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
     diff = get_difference_of_current_and_prev_images();
-    syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
+    syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold, fnow);
 
     // Move the tail index once to try to get the right image
     rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
