@@ -327,8 +327,8 @@ void Sequencer(int id)
     if ((seqCnt % 10) == 0)
         sem_post(&semS1_frame_acq);
 
-    // Service_2 - Frame Processing @ 5 Hz
-    if ((seqCnt % 20) == 0)
+    // Service_2 - Frame Processing @ 2 Hz
+    if ((seqCnt % 50) == 0)
         sem_post(&semS2_frame_proc);
 
     // Service_3 - Frame Storage @ 2 Hz
