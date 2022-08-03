@@ -485,7 +485,7 @@ int seq_frame_process(void)
             // TODO: remove hard coding to the last part of the ring
             prev_tail_index = 4;
         } else {
-            prev_tail_index = (rb_frame_acq.tail_idx - 1) % rb_frame_acq.ring_size;
+            prev_tail_index = (rb_frame_acq.tail_idx - 1);
         }
 
         syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
