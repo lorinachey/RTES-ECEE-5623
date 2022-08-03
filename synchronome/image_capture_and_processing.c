@@ -470,34 +470,36 @@ int seq_frame_read(void)
 int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
-    int diff_threshold = 191200;
+    int diff_threshold = 191100;
     int max_diff = 300000;
 
-    int prev_tail_index;
-    if (rb_frame_acq.tail_idx == 0) {
-        // WARNING!!!
-        // TODO: remove hard coding to the last part of the ring
-        prev_tail_index = 4;
-    } else {
-        prev_tail_index = (rb_frame_acq.tail_idx - 1);
+    while (1) {
+        int prev_tail_index;
+        if (rb_frame_acq.tail_idx == 0) {
+            // WARNING!!!
+            // TODO: remove hard coding to the last part of the ring
+            prev_tail_index = 4;
+        } else {
+            prev_tail_index = (rb_frame_acq.tail_idx - 1);
+        }
+
+        syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
+
+        prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[prev_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+
+        diff = get_difference_of_current_and_prev_images();
+        syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
+
+        // Move the tail index once to try to get the right image
+        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 1;
+
+        if (diff > diff_threshold && diff < max_diff) {
+            // We've found a viable image so write it out to the frame storage ring buffer
+            copy_image_from_scratchpad_to_frame_store_ring_buffer();
+        }
     }
-
-    syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
-
-    prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[prev_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
-    cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
-
-    diff = get_difference_of_current_and_prev_images();
-    syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
-
-    if (diff > diff_threshold && diff < max_diff) {
-        // We've found a viable image so write it out to the frame storage ring buffer
-        copy_image_from_scratchpad_to_frame_store_ring_buffer();
-    }
-
-    // Move the tail index once to try to get the right image
-    rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
-    rb_frame_acq.count = rb_frame_acq.count - 1;
 
     if (process_framecnt > 0)
     {
