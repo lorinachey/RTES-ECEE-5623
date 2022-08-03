@@ -473,10 +473,6 @@ int seq_frame_process(void)
     int diff_threshold = 191200;
     int max_diff = 300000;
 
-    if (rb_frame_acq.tail_idx == rb_frame_acq.head_idx) {
-        return 0;
-    }
-
     int prev_tail_index;
     if (rb_frame_acq.tail_idx == 0) {
         // WARNING!!!
