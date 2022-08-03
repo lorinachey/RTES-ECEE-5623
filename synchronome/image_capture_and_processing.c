@@ -470,7 +470,8 @@ int seq_frame_read(void)
 int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
-    int diff_threshold = 191000;
+    int diff_threshold = 192000;
+    int max_diff = 300000;
 
     while (1) {
 
@@ -487,9 +488,10 @@ int seq_frame_process(void)
         diff = get_difference_of_current_and_prev_images();
         syslog(LOG_CRIT, "%s diff: %d threshold: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold);
 
-        if (diff > diff_threshold) {
-            // We've found a viable image so right it to 
+        if (diff > diff_threshold && diff < max_diff) {
+            // We've found a viable image so write it out to the frame storage ring buffer
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
+            break;
         }
 
         // Move the tail index once to try to get the right image
