@@ -222,7 +222,7 @@ void main(void)
 
     // Create Service threads which will block awaiting release for:
 
-    // Servcie_1 = RT_MAX-1	@ 10 Hz
+    // Servcie_1 = RT_MAX-1	@ 20 Hz
     rt_param[0].sched_priority = rt_max_prio - 1;
     pthread_attr_setschedparam(&rt_sched_attr[0], &rt_param[0]);
     rc = pthread_create(&threads[0],                                // pointer to thread descriptor
@@ -235,7 +235,7 @@ void main(void)
     else
         printf("pthread_create successful for service 1\n");
 
-    // Service_2 = RT_MAX-2	@ 2 Hz
+    // Service_2 = RT_MAX-2	@ 5 Hz
     rt_param[1].sched_priority = rt_max_prio - 2;
     pthread_attr_setschedparam(&rt_sched_attr[1], &rt_param[1]);
     rc = pthread_create(&threads[1],
@@ -247,7 +247,7 @@ void main(void)
     else
         printf("pthread_create successful for service 2\n");
 
-    // Service_3 = RT_MAX-3	@ 2 Hz
+    // BEST EFFORT Service_3 = RT_MAX-3
     rt_param[2].sched_priority = rt_max_prio - 3;
     pthread_attr_setschedparam(&rt_sched_attr[2], &rt_param[2]);
     rc = pthread_create(&threads[2],
@@ -324,13 +324,14 @@ void Sequencer(int id)
 
     // Release each service at a sub-rate of the generic sequencer rate which is set to run at 100Hz
     // Service_1 - Frame Acquisition @ 10 Hz
-    if ((seqCnt % 10) == 0)
+    if ((seqCnt % 5) == 0)
         sem_post(&semS1_frame_acq);
 
-    // Service_2 - Frame Processing @ 2 Hz
-    if ((seqCnt % 50) == 0)
+    // Service_2 - Frame Processing @ 5 Hz
+    if ((seqCnt % 20) == 0)
         sem_post(&semS2_frame_proc);
 
+    // Running as Best Effort service instead
     // Service_3 - Frame Storage @ 2 Hz
     // if ((seqCnt % 50) == 0)
     //     sem_post(&semS3_frame_store);
@@ -356,13 +357,13 @@ void *Service_1_frame_acquisition(void *threadp)
             break;
         S1Cnt++;
 
-        // DO WORK - acquire V4L2 frame here or OpenCV frame here
+        // DO WORK - acquire V4L2 frame here
         seq_frame_read();
 
         // on order of up to milliseconds of latency to get time
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 10 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         if (S1Cnt > MAX_SQN_CNT)
         {
@@ -399,7 +400,7 @@ void *Service_2_frame_process(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 2 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 5 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
     }
 
     pthread_exit((void *)0);
