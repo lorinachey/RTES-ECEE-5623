@@ -429,7 +429,7 @@ void *Service_3_frame_storage(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s BEST EFFORT on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
+        // syslog(LOG_CRIT, "%s BEST EFFORT on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
         if (store_cnt == MAX_SQN_CNT)
