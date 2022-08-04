@@ -485,6 +485,7 @@ int seq_frame_process(void)
         if (diff > diff_threshold && diff < max_diff) {
             // We've found a viable image so write it out to the frame storage ring buffer
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
+            break;
         }
 
         if (process_framecnt > 0)
