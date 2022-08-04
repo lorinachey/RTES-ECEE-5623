@@ -470,8 +470,8 @@ int seq_frame_read(void)
 int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
-    int diff_threshold = 191300;
-    int max_diff = 300000;
+    int diff_threshold = 232200;
+    int max_diff = 600000;
 
     int prev_tail_index;
     if (rb_frame_acq.tail_idx == 0) {

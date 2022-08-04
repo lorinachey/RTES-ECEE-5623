@@ -13,6 +13,8 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
     Sequencer = RT_MAX	@ 100 Hz
     Service_1_frame_acq   = RT_MAX-1	@ 20  Hz
     Service_2_frame_proc  = RT_MAX-2	@ 2   Hz
+
+    Best Effort
     Service_3_frame_store = RT_MAX-3	@ 2   Hz
 
 **/
