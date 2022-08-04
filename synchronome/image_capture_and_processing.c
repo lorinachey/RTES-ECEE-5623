@@ -50,7 +50,8 @@
 #define MAX_VRES (1080)
 #define MAX_PIXEL_SIZE (3)
 
-#define DIFF_THRESHOLD (37900000)
+#define MIN_DIFF_THRESHOLD (230000)
+#define MAX_DIFF_THRESHOLD (600000)
 
 #define HRES (640)
 #define VRES (480)
@@ -131,7 +132,7 @@ static int xioctl(int fh, int request, void *arg)
 }
 
 char ppm_header[] = "P6\n#9999999999 sec 9999999999 msec \n" HRES_STR " " VRES_STR "\n255\n";
-char ppm_dumpname[] = "frames/test0000.ppm";
+char ppm_dumpname[] = "frames/lach0000.ppm";
 
 static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec *time)
 {
@@ -165,7 +166,7 @@ static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec 
 }
 
 char pgm_header[] = "P5\n#9999999999 sec 9999999999 msec \n" HRES_STR " " VRES_STR "\n255\n";
-char pgm_dumpname[] = "frames/test0000.pgm";
+char pgm_dumpname[] = "frames/lach0000.pgm";
 
 static void dump_pgm(const void *p, int size, unsigned int tag, struct timespec *time)
 {
@@ -300,7 +301,7 @@ static int save_image(const void *p, int size, struct timespec *frame_time)
 #elif defined(COLOR_CONVERT_GRAY)
         if (save_framecnt > 0)
         {
-            dump_pgm(frame_ptr, (size / 2), process_framecnt, frame_time);
+            dump_pgm(frame_ptr, (size / 2), save_framecnt, frame_time);
             // printf("Dump YUYV converted to YY size %d\n", size);
         }
 #endif
@@ -309,7 +310,7 @@ static int save_image(const void *p, int size, struct timespec *frame_time)
     else if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_RGB24)
     {
         // printf("Dump RGB as-is size %d\n", size);
-        dump_ppm(frame_ptr, size, process_framecnt, frame_time);
+        dump_ppm(frame_ptr, size, save_framecnt, frame_time);
     }
     else
     {
@@ -467,8 +468,6 @@ int seq_frame_read(void)
 int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
-    int diff_threshold = 200000;
-    int max_diff = 600000;
 
     // Go through all the frames in the acquisition ring buffer and try to detect a good tick mark
     for (int i = 1; i < FRAMES_MULTIPLIER; i++) {
@@ -479,13 +478,14 @@ int seq_frame_process(void)
         clock_gettime(CLOCK_MONOTONIC, &time_now);
         fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
         diff = get_difference_of_current_and_prev_images();
-        syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold, fnow);
+        syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, MIN_DIFF_THRESHOLD, fnow);
 
 
-        if (diff > diff_threshold && diff < max_diff) {
+        if (diff > MIN_DIFF_THRESHOLD && diff < MAX_DIFF_THRESHOLD) {
             // We've found a viable image so write it out to the frame storage ring buffer
+            // Return early so we don't copy duplicates to memory
             copy_image_from_scratchpad_to_frame_store_ring_buffer();
-            break;
+            return cnt;
         }
 
         if (process_framecnt > 0)
@@ -493,11 +493,6 @@ int seq_frame_process(void)
             clock_gettime(CLOCK_MONOTONIC, &time_now);
             fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
         }
-
-        // TODO: Reevaluate if this is necessary!
-        // Move the tail index once to try to get the right image
-        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
-        rb_frame_acq.count = rb_frame_acq.count - 1;
     }
 
     return cnt;
@@ -540,7 +535,6 @@ int seq_frame_store(void)
 
     if (rb_frame_store.count > 0) {
         syslog(LOG_CRIT, "%s RBFS count: %d head_idx: %d tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count, rb_frame_store.head_idx, rb_frame_store.tail_idx);
-        //syslog(LOG_CRIT, "%s saving from RB store: tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.tail_idx);
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
         rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
         rb_frame_store.count--;

@@ -67,7 +67,7 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 
 int abortTest = FALSE;
 int abortS1_frame_acq = FALSE, abortS2_frame_proc = FALSE, abortS3_frame_store = FALSE;
-sem_t semS1_frame_acq, semS2_frame_proc, semS3_frame_store;
+sem_t semS1_frame_acq, semS2_frame_proc;
 struct timespec start_time_val;
 double start_realtime;
 
@@ -157,11 +157,6 @@ void main(void)
         printf("Failed to initialize S2 semaphore\n");
         exit(-1);
     }
-    if (sem_init(&semS3_frame_store, 0, 0))
-    {
-        printf("Failed to initialize S3 semaphore\n");
-        exit(-1);
-    }
 
     mainpid = getpid();
 
@@ -190,7 +185,7 @@ void main(void)
     for (i = 0; i < NUM_THREADS; i++)
     {
         if (i == 2) {
-            // run the frame storage on it's own core
+            // run the frame storage service on it's own core
             CPU_ZERO(&threadcpu);
             cpuidx = (FRAME_STORE_CORE);
             CPU_SET(cpuidx, &threadcpu);
@@ -237,7 +232,7 @@ void main(void)
     else
         printf("pthread_create successful for service 1\n");
 
-    // Service_2 = RT_MAX-2	@ 5 Hz
+    // Service_2 = RT_MAX-2	@ 1 Hz
     rt_param[1].sched_priority = rt_max_prio - 2;
     pthread_attr_setschedparam(&rt_sched_attr[1], &rt_param[1]);
     rc = pthread_create(&threads[1],
@@ -253,7 +248,7 @@ void main(void)
     rt_param[2].sched_priority = rt_max_prio - 3;
     pthread_attr_setschedparam(&rt_sched_attr[2], &rt_param[2]);
     rc = pthread_create(&threads[2],
-                        (void *)0,                                // TODO: reevaluate - try using defaults
+                        (void *)0,
                         Service_3_frame_storage,
                         (void *)&(threadParams[2]));
     if (rc < 0)
@@ -315,7 +310,6 @@ void Sequencer(int id)
         abortS3_frame_store = TRUE;
         sem_post(&semS1_frame_acq);
         sem_post(&semS2_frame_proc);
-        //sem_post(&semS3_frame_store);
     }
 
     seqCnt++;
@@ -332,11 +326,6 @@ void Sequencer(int id)
     // Service_2 - Frame Processing @ 1 Hz
     if ((seqCnt % 100) == 0)
         sem_post(&semS2_frame_proc);
-
-    // Running as Best Effort service instead
-    // Service_3 - Frame Storage @ 2 Hz
-    // if ((seqCnt % 50) == 0)
-    //     sem_post(&semS3_frame_store);
 }
 
 void *Service_1_frame_acquisition(void *threadp)
@@ -425,8 +414,6 @@ void *Service_3_frame_storage(void *threadp)
 
     while (!abortS3_frame_store)
     {
-        //sem_wait(&semS3_frame_store);
-
         if (abortS3_frame_store)
             break;
         S3Cnt++;
