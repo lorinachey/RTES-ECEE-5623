@@ -12,10 +12,10 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 
     Sequencer = RT_MAX	@ 100 Hz
     Service_1_frame_acq   = RT_MAX-1	@ 20  Hz
-    Service_2_frame_proc  = RT_MAX-2	@ 2   Hz
+    Service_2_frame_proc  = RT_MAX-2	@ 1   Hz
 
     Best Effort
-    Service_3_frame_store = RT_MAX-3	@ 2   Hz
+    Service_3_frame_store = RT_MAX-3
 
 **/
 
@@ -329,8 +329,8 @@ void Sequencer(int id)
     if ((seqCnt % 5) == 0)
         sem_post(&semS1_frame_acq);
 
-    // Service_2 - Frame Processing @ 5 Hz
-    if ((seqCnt % 20) == 0)
+    // Service_2 - Frame Processing @ 1 Hz
+    if ((seqCnt % 100) == 0)
         sem_post(&semS2_frame_proc);
 
     // Running as Best Effort service instead
@@ -358,6 +358,8 @@ void *Service_1_frame_acquisition(void *threadp)
         if (abortS1_frame_acq)
             break;
         S1Cnt++;
+
+        syslog(LOG_CRIT, "%s at 20 Hz on core %d starting work %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         // DO WORK - acquire V4L2 frame here
         seq_frame_read();
@@ -397,12 +399,14 @@ void *Service_2_frame_process(void *threadp)
             break;
         S2Cnt++;
 
+        syslog(LOG_CRIT, "%s at 1 Hz on core %d starting work %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+
         // DO WORK - transform frame
         process_cnt = seq_frame_process();
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 5 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+        syslog(LOG_CRIT, "%s at 1 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
     }
 
     pthread_exit((void *)0);

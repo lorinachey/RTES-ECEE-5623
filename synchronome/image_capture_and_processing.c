@@ -64,10 +64,7 @@
 #define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
 #define FRAMES_PER_SEC (1)
-//#define FRAMES_PER_SEC (10)
-//#define FRAMES_PER_SEC (20)
-//#define FRAMES_PER_SEC (25)
-//#define FRAMES_PER_SEC (30)
+#define FRAMES_MULTIPLIER (5)
 
 //#define COLOR_CONVERT_RGB
 #define COLOR_CONVERT_GRAY
@@ -100,7 +97,7 @@ struct ring_buffer_t
     int head_idx;
     int count;
 
-    struct save_frame_t save_frame[5 * FRAMES_PER_SEC];
+    struct save_frame_t save_frame[FRAMES_MULTIPLIER * FRAMES_PER_SEC];
 };
 
 static struct ring_buffer_t rb_frame_acq;
@@ -473,38 +470,33 @@ int seq_frame_process(void)
     int diff_threshold = 200000;
     int max_diff = 600000;
 
-    int prev_tail_index;
-    if (rb_frame_acq.tail_idx == 0) {
-        // WARNING!!!
-        // TODO: remove hard coding to the last part of the ring
-        prev_tail_index = 4;
-    } else {
-        prev_tail_index = (rb_frame_acq.tail_idx - 1);
-    }
+    // Go through all the frames in the acquisition ring buffer and try to detect a good tick mark
+    for (int i = 1; i < FRAMES_MULTIPLIER; i++) {
 
-    //syslog(LOG_CRIT, "%s prev_tail_idx: %d curr_tail_idx: %d curr_head_idx: %d count: %d\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_tail_index, rb_frame_acq.tail_idx, rb_frame_acq.head_idx, rb_frame_acq.count);
+        prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[i - 1].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
+        cnt = process_image((void *)&(rb_frame_acq.save_frame[i].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-    prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[prev_tail_index].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
-    cnt = process_image((void *)&(rb_frame_acq.save_frame[rb_frame_acq.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
-
-    clock_gettime(CLOCK_MONOTONIC, &time_now);
-    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
-    diff = get_difference_of_current_and_prev_images();
-    syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold, fnow);
-
-    // Move the tail index once to try to get the right image
-    rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
-    rb_frame_acq.count = rb_frame_acq.count - 1;
-
-    if (diff > diff_threshold && diff < max_diff) {
-        // We've found a viable image so write it out to the frame storage ring buffer
-        copy_image_from_scratchpad_to_frame_store_ring_buffer();
-    }
-
-    if (process_framecnt > 0)
-    {
         clock_gettime(CLOCK_MONOTONIC, &time_now);
         fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+        diff = get_difference_of_current_and_prev_images();
+        syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, diff_threshold, fnow);
+
+
+        if (diff > diff_threshold && diff < max_diff) {
+            // We've found a viable image so write it out to the frame storage ring buffer
+            copy_image_from_scratchpad_to_frame_store_ring_buffer();
+        }
+
+        if (process_framecnt > 0)
+        {
+            clock_gettime(CLOCK_MONOTONIC, &time_now);
+            fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+        }
+
+        // TODO: Reevaluate if this is necessary!
+        // Move the tail index once to try to get the right image
+        rb_frame_acq.tail_idx = (rb_frame_acq.tail_idx + 1) % rb_frame_acq.ring_size;
+        rb_frame_acq.count = rb_frame_acq.count - 1;
     }
 
     return cnt;
@@ -525,7 +517,7 @@ void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
  * @return int 
  */
 int get_difference_of_current_and_prev_images() {
-    int diff = 0;
+    int diff = 0; // TODO: make the diff an unsigned int
     int loop_count = HRES * VRES * PIXEL_SIZE;
 
     for (int i = 0; i < loop_count; i++) {
@@ -629,12 +621,12 @@ static void init_mmap(char *dev_name)
     rb_frame_acq.tail_idx = 0;
     rb_frame_acq.head_idx = 0;
     rb_frame_acq.count = 0;
-    rb_frame_acq.ring_size = 5 * FRAMES_PER_SEC;
+    rb_frame_acq.ring_size = FRAMES_MULTIPLIER * FRAMES_PER_SEC;
 
     rb_frame_store.tail_idx = 0;
     rb_frame_store.head_idx = 0;
     rb_frame_store.count = 0;
-    rb_frame_store.ring_size = 5 * FRAMES_PER_SEC;
+    rb_frame_store.ring_size = FRAMES_MULTIPLIER * FRAMES_PER_SEC;
 
     if (-1 == xioctl(camera_device_fd, VIDIOC_REQBUFS, &req))
     {
