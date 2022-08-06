@@ -504,16 +504,15 @@ int seq_frame_process(void)
         // Go through all the frames in the acquisition ring buffer and try to detect a good tick mark
         for (int i = 0; i < FRAMES_MULTIPLIER; i++) {
 
-            cnt = process_image((void *)&(rb_frame_acq.save_frame[i].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
-
             clock_gettime(CLOCK_MONOTONIC, &time_now);
             fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
 
             fcurr = (double)rb_frame_acq.save_frame[i].time_stamp.tv_sec + (double)rb_frame_acq.save_frame[i].time_stamp.tv_nsec / NANOSEC_PER_SEC;
 
             syslog(LOG_CRIT, "%s Before check fprev: %lf fcurr: %lf time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_time_stamp, fcurr, fnow);
-            if (abs(fnow - prev_time_stamp) <= 0.0000001) {
+            if (abs(fcurr - prev_time_stamp) <= 0.0000001) {
                 syslog(LOG_CRIT, "%s After check fprev: %lf fcurr: %lf time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_time_stamp, fcurr, fnow);
+                cnt = process_image((void *)&(rb_frame_acq.save_frame[i].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
                 copy_image_from_scratchpad_to_frame_store_ring_buffer();
                 found_good_image_flag = 1;
                 prev_time_stamp = fcurr;
