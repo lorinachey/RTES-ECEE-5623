@@ -49,7 +49,7 @@ For the synchronome project, priorities by Rate Monotonic policy are changed to:
 #define NUM_CPU_CORES (4)
 #define TRUE (1)
 #define FALSE (0)
-#define MAX_SQN_CNT (7000)
+#define MAX_SQN_CNT (4000)
 
 #define RT_CORE (2)
 #define FRAME_STORE_CORE (3)
