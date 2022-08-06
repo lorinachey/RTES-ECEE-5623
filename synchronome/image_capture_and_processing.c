@@ -61,8 +61,6 @@
 
 #define STARTUP_FRAMES (30)
 #define LAST_FRAMES (1)
-#define CAPTURE_FRAMES (300 + LAST_FRAMES)
-#define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
 #define FRAMES_PER_SEC (1)
 #define FRAMES_MULTIPLIER (20)
@@ -459,6 +457,9 @@ int seq_frame_read(void)
         errno_exit("VIDIOC_QBUF");
 }
 
+static double prev_time_stamp = 0;
+static int found_good_image_flag = 0;
+
 /**
  * @brief Compare each image in the frame acquisition ring buffer. Determine if the difference after processing
  *        is above a threshold for image quality. If it is, add that image to the dedicated storage ring buffer.
@@ -468,31 +469,65 @@ int seq_frame_read(void)
 int seq_frame_process(void)
 {
     int cnt, diff, prev_cnt;
+    double fprev = 0;
+    double fcurr = 0;
 
-    // Go through all the frames in the acquisition ring buffer and try to detect a good tick mark
-    for (int i = 1; i < FRAMES_MULTIPLIER; i++) {
+    if (found_good_image_flag == 0) {
+        // Go through all the frames in the acquisition ring buffer and try to detect a good tick mark
+        for (int i = 1; i < FRAMES_MULTIPLIER; i++) {
 
-        prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[i - 1].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
-        cnt = process_image((void *)&(rb_frame_acq.save_frame[i].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+            prev_cnt = process_image((void *)&(rb_frame_acq.save_frame[i - 1].frame[0]), HRES * VRES * PIXEL_SIZE, 1);
+            cnt = process_image((void *)&(rb_frame_acq.save_frame[i].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
 
-        clock_gettime(CLOCK_MONOTONIC, &time_now);
-        fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
-        diff = get_difference_of_current_and_prev_images();
-        syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, MIN_DIFF_THRESHOLD, fnow);
-
-
-        if (diff > MIN_DIFF_THRESHOLD && diff < MAX_DIFF_THRESHOLD) {
-            // We've found a viable image so write it out to the frame storage ring buffer
-            // Return early so we don't copy duplicates to memory
-            copy_image_from_scratchpad_to_frame_store_ring_buffer();
-            return cnt;
-        }
-
-        if (process_framecnt > 0)
-        {
             clock_gettime(CLOCK_MONOTONIC, &time_now);
             fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+            diff = get_difference_of_current_and_prev_images();
+            syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, MIN_DIFF_THRESHOLD, fnow);
+
+
+            if (diff > MIN_DIFF_THRESHOLD && diff < MAX_DIFF_THRESHOLD) {
+                // We've found a viable image so write it out to the frame storage ring buffer
+                // Return early so we don't copy duplicates to memory
+                copy_image_from_scratchpad_to_frame_store_ring_buffer();
+                found_good_image_flag = 1;
+                prev_time_stamp = fnow;
+                return cnt;
+            }
+
+            if (process_framecnt > 0)
+            {
+                clock_gettime(CLOCK_MONOTONIC, &time_now);
+                fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+            }
         }
+    } else {
+        // Go through all the frames in the acquisition ring buffer and try to detect a good tick mark
+        for (int i = 0; i < FRAMES_MULTIPLIER; i++) {
+
+            cnt = process_image((void *)&(rb_frame_acq.save_frame[i].frame[0]), HRES * VRES * PIXEL_SIZE, 0);
+
+            clock_gettime(CLOCK_MONOTONIC, &time_now);
+            fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+
+            fcurr = (double)rb_frame_acq.save_frame[i].time_stamp.tv_sec + (double)rb_frame_acq.save_frame[i].time_stamp.tv_nsec / NANOSEC_PER_SEC;
+
+            syslog(LOG_CRIT, "%s Before check fprev: %lf fcurr: %lf time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_time_stamp, fcurr, fnow);
+            if (abs(fnow - prev_time_stamp) <= 0.0000001) {
+                syslog(LOG_CRIT, "%s After check fprev: %lf fcurr: %lf time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, prev_time_stamp, fcurr, fnow);
+                copy_image_from_scratchpad_to_frame_store_ring_buffer();
+                found_good_image_flag = 1;
+                prev_time_stamp = fcurr;
+                return cnt;
+            }
+
+            if (process_framecnt > 0)
+            {
+                clock_gettime(CLOCK_MONOTONIC, &time_now);
+                fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+            }
+        }
+
+
     }
 
     return cnt;
