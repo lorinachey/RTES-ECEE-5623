@@ -50,7 +50,7 @@
 #define MAX_VRES (1080)
 #define MAX_PIXEL_SIZE (3)
 
-#define MIN_DIFF_THRESHOLD (230000)
+#define MIN_DIFF_THRESHOLD (303750)
 #define MAX_DIFF_THRESHOLD (600000)
 
 #define HRES (640)
@@ -65,7 +65,7 @@
 #define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
 #define FRAMES_PER_SEC (1)
-#define FRAMES_MULTIPLIER (5)
+#define FRAMES_MULTIPLIER (20)
 
 //#define COLOR_CONVERT_RGB
 #define COLOR_CONVERT_GRAY
@@ -278,7 +278,7 @@ static int save_image(const void *p, int size, struct timespec *frame_time)
     unsigned char *frame_ptr = (unsigned char *)p;
 
     save_framecnt++;
-    printf("save frame %d: \n", save_framecnt);
+    //printf("save frame %d: \n", save_framecnt);
 
 #ifdef DUMP_FRAMES
 
@@ -328,7 +328,7 @@ static int process_image(const void *p, int size, int is_previous_image)
     unsigned char *frame_ptr = (unsigned char *)p;
 
     process_framecnt++;
-    printf("process frame %d: \n", process_framecnt);
+    //printf("process frame %d: \n", process_framecnt);
 
     if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_GREY)
     {
