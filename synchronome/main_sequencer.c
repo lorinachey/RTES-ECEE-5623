@@ -135,7 +135,7 @@ void main(void)
     clock_getres(MY_CLOCK_TYPE, &current_time_res);
     current_realtime_res = realtime(&current_time_res);
     printf("START High Rate Sequencer @ sec= %6.9lf with resolution %6.9lf\n", (current_realtime - start_realtime), current_realtime_res);
-    syslog(LOG_CRIT, "%d START High Rate Sequencer @ sec= %6.9lf with resolution %6.9lf\n", SYS_LOG_TAG,(current_realtime - start_realtime), current_realtime_res);
+   // syslog(LOG_CRIT, "%d START High Rate Sequencer @ sec= %6.9lf with resolution %6.9lf\n", SYS_LOG_TAG,(current_realtime - start_realtime), current_realtime_res);
 
     printf("System has %d processors configured and %d available.\n", get_nprocs_conf(), get_nprocs());
 
@@ -316,7 +316,7 @@ void Sequencer(int id)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val); current_realtime=realtime(&current_time_val);
     // printf("Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
-    // syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
+    //// syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
 
     // Release each service at a sub-rate of the generic sequencer rate which is set to run at 100Hz
     // Service_1 - Frame Acquisition @ 10 Hz
@@ -337,7 +337,7 @@ void *Service_1_frame_acquisition(void *threadp)
     // Start up processing and resource initialization
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "%d thread @ sec= %6.9lf\n", SYS_LOG_TAG_S1, current_realtime - start_realtime);
+   // syslog(LOG_CRIT, "%d thread @ sec= %6.9lf\n", SYS_LOG_TAG_S1, current_realtime - start_realtime);
 
     while (!abortS1_frame_acq) // check for synchronous abort request
     {
@@ -348,7 +348,7 @@ void *Service_1_frame_acquisition(void *threadp)
             break;
         S1Cnt++;
 
-        syslog(LOG_CRIT, "%s at 20 Hz on core %d starting work %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+       // syslog(LOG_CRIT, "%s at 20 Hz on core %d starting work %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         // DO WORK - acquire V4L2 frame here
         seq_frame_read();
@@ -356,7 +356,7 @@ void *Service_1_frame_acquisition(void *threadp)
         // on order of up to milliseconds of latency to get time
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
+       // syslog(LOG_CRIT, "%s at 20 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S1, sched_getcpu(), S1Cnt, current_realtime - start_realtime);
 
         if (S1Cnt > MAX_SQN_CNT)
         {
@@ -377,7 +377,7 @@ void *Service_2_frame_process(void *threadp)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "%s thread @ sec= %6.9lf\n", SYS_LOG_TAG_S2, current_realtime - start_realtime);
+   // syslog(LOG_CRIT, "%s thread @ sec= %6.9lf\n", SYS_LOG_TAG_S2, current_realtime - start_realtime);
 
     while (!abortS2_frame_proc)
     {
@@ -387,14 +387,14 @@ void *Service_2_frame_process(void *threadp)
             break;
         S2Cnt++;
 
-        syslog(LOG_CRIT, "%s at 1 Hz on core %d starting work %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+       // syslog(LOG_CRIT, "%s at 1 Hz on core %d starting work %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
 
         // DO WORK - transform frame
         process_cnt = seq_frame_process();
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        syslog(LOG_CRIT, "%s at 1 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
+       // syslog(LOG_CRIT, "%s at 1 Hz on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S2, sched_getcpu(), S2Cnt, current_realtime - start_realtime);
     }
 
     pthread_exit((void *)0);
@@ -409,7 +409,7 @@ void *Service_3_frame_storage(void *threadp)
 
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    syslog(LOG_CRIT, "%s thread @ sec= %6.9lf\n", SYS_LOG_TAG_S3, current_realtime - start_realtime);
+   // syslog(LOG_CRIT, "%s thread @ sec= %6.9lf\n", SYS_LOG_TAG_S3, current_realtime - start_realtime);
 
     while (!abortS3_frame_store)
     {
@@ -422,7 +422,7 @@ void *Service_3_frame_storage(void *threadp)
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
         current_realtime = realtime(&current_time_val);
-        // syslog(LOG_CRIT, "%s BEST EFFORT on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
+        //// syslog(LOG_CRIT, "%s BEST EFFORT on core %d for release %llu @ sec= %6.9lf\n", SYS_LOG_TAG_S3, sched_getcpu(), S3Cnt, current_realtime - start_realtime);
 
         // after last write, set synchronous abort
         if (store_cnt == MAX_SQN_CNT)

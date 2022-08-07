@@ -436,9 +436,9 @@ int seq_frame_read(void)
     read_frame();
 
     // save off copy of image with time-stamp here
-    // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
+    // //syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
-    syslog(LOG_CRIT, "%s RB frame acq head_idx: %d tail_idx: %d\n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx, rb_frame_acq.tail_idx);
+    //syslog(LOG_CRIT, "%s RB frame acq head_idx: %d tail_idx: %d\n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx, rb_frame_acq.tail_idx);
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
     rb_frame_acq.count++;
@@ -448,8 +448,8 @@ int seq_frame_read(void)
 
     if (read_framecnt > 0)
     {
-        // syslog(LOG_CRIT, "read_framecnt=%d, rb.tail=%d, rb.head=%d, rb.count=%d at %lf and %lf FPS", read_framecnt, ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count, (fnow-fstart), (double)(read_framecnt) / (fnow-fstart));
-        syslog(LOG_CRIT, "%d read_framecnt=%d at %lf and %lf FPS", SYS_LOG_TAG_SEQ_FRAME_READ, read_framecnt, (fnow - fstart), (double)(read_framecnt) / (fnow - fstart));
+        // //syslog(LOG_CRIT, "read_framecnt=%d, rb.tail=%d, rb.head=%d, rb.count=%d at %lf and %lf FPS", read_framecnt, ring_buffer.tail_idx, ring_buffer.head_idx, ring_buffer.count, (fnow-fstart), (double)(read_framecnt) / (fnow-fstart));
+        //syslog(LOG_CRIT, "%d read_framecnt=%d at %lf and %lf FPS", SYS_LOG_TAG_SEQ_FRAME_READ, read_framecnt, (fnow - fstart), (double)(read_framecnt) / (fnow - fstart));
     }
 
     if (-1 == xioctl(camera_device_fd, VIDIOC_QBUF, &frame_buf))
@@ -475,7 +475,7 @@ int seq_frame_process(void)
         clock_gettime(CLOCK_MONOTONIC, &time_now);
         fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
         diff = get_difference_of_current_and_prev_images();
-        syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, MIN_DIFF_THRESHOLD, fnow);
+        //syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, MIN_DIFF_THRESHOLD, fnow);
 
         if (diff > MIN_DIFF_THRESHOLD && diff < MAX_DIFF_THRESHOLD) {
             // We've found a viable image so write it out to the frame storage ring buffer
@@ -530,7 +530,7 @@ int seq_frame_store(void)
     int cnt = 0;
 
     if (rb_frame_store.count > 0) {
-        syslog(LOG_CRIT, "%s RBFS count: %d head_idx: %d tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count, rb_frame_store.head_idx, rb_frame_store.tail_idx);
+        //syslog(LOG_CRIT, "%s RBFS count: %d head_idx: %d tail_idx: %d", SYS_LOG_TAG_SEQ_FRAME_STORE, rb_frame_store.count, rb_frame_store.head_idx, rb_frame_store.tail_idx);
         cnt = save_image((void *)&(rb_frame_store.save_frame[rb_frame_store.tail_idx].frame[0]), HRES * VRES * PIXEL_SIZE, &time_now);
         rb_frame_store.tail_idx = ( rb_frame_store.tail_idx + 1) % rb_frame_store.ring_size;
         rb_frame_store.count--;
@@ -539,7 +539,7 @@ int seq_frame_store(void)
         {
             clock_gettime(CLOCK_MONOTONIC, &time_now);
             fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
-            syslog(LOG_CRIT, "%s saved frame %lf, @ %lf FPS\n", SYS_LOG_TAG_SEQ_FRAME_STORE, (fnow - fstart), (double)(save_framecnt + 1) / (fnow - fstart));
+            //syslog(LOG_CRIT, "%s saved frame %lf, @ %lf FPS\n", SYS_LOG_TAG_SEQ_FRAME_STORE, (fnow - fstart), (double)(save_framecnt + 1) / (fnow - fstart));
         }
     }
     return cnt;
