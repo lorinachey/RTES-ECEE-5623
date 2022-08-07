@@ -365,7 +365,6 @@ void *Service_1_frame_acquisition(void *threadp)
     }
 
     // Resource shutdown here
-    //
     pthread_exit((void *)0);
 }
 

@@ -60,9 +60,6 @@
 #define VRES_STR "480"
 
 #define STARTUP_FRAMES (30)
-#define LAST_FRAMES (1)
-#define CAPTURE_FRAMES (300 + LAST_FRAMES)
-#define FRAMES_TO_ACQUIRE (CAPTURE_FRAMES + STARTUP_FRAMES + LAST_FRAMES)
 
 #define FRAMES_PER_SEC (1)
 #define FRAMES_MULTIPLIER (20)
@@ -479,7 +476,6 @@ int seq_frame_process(void)
         fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
         diff = get_difference_of_current_and_prev_images();
         syslog(LOG_CRIT, "%s diff: %d threshold: %d time: %lf\n", SYS_LOG_TAG_SEQ_FRAME_PROC, diff, MIN_DIFF_THRESHOLD, fnow);
-
 
         if (diff > MIN_DIFF_THRESHOLD && diff < MAX_DIFF_THRESHOLD) {
             // We've found a viable image so write it out to the frame storage ring buffer
