@@ -436,16 +436,18 @@ int seq_frame_read(void)
 
     read_frame();
 
+    clock_gettime(CLOCK_MONOTONIC, &time_now);
+    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
+
     // save off copy of image with time-stamp here
     // syslog(LOG_CRIT, "memcpy to %p from %p for %d bytes\n", (void *)&(ring_buffer.save_frame[ring_buffer.tail_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
     memcpy((void *)&(rb_frame_acq.save_frame[rb_frame_acq.head_idx].frame[0]), buffers[frame_buf.index].start, frame_buf.bytesused);
+    rb_frame_acq.save_frame[rb_frame_acq.head_idx].time_stamp = time_now;
     syslog(LOG_CRIT, "%s RB frame acq head_idx: %d tail_idx: %d\n", SYS_LOG_TAG_SEQ_FRAME_READ, rb_frame_acq.head_idx, rb_frame_acq.tail_idx);
 
     rb_frame_acq.head_idx = (rb_frame_acq.head_idx + 1) % rb_frame_acq.ring_size;
     rb_frame_acq.count++;
 
-    clock_gettime(CLOCK_MONOTONIC, &time_now);
-    fnow = (double)time_now.tv_sec + (double)time_now.tv_nsec / NANOSEC_PER_SEC;
 
     if (read_framecnt > 0)
     {
