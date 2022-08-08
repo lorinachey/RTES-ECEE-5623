@@ -132,16 +132,16 @@ static int xioctl(int fh, int request, void *arg)
 }
 
 char ppm_header[] = "P6\n#9999999999 sec 9999999999 msec \n" HRES_STR " " VRES_STR "\n255\n";
-char ppm_dumpname[] = "frames/test0000_loac4399_99999sec99999msec.ppm";
+char ppm_dumpname[] = "frames/test0000_loac4399_9999sec9999msec.ppm";
 
 static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec *time)
 {
     int written, total, dumpfd;
 
     snprintf(&ppm_dumpname[11], 9, "%04d", tag);
-    snprintf(&ppm_dumpname[25], 6, "%05d", (int)time->tv_sec);
-    snprintf(&ppm_dumpname[33], 6, "%05d", (int)((time->tv_nsec) / 1000000));
-    //strncat(&ppm_dumpname[40], ".ppm", 5);
+    snprintf(&ppm_dumpname[25], 9, "%04d", (int)time->tv_sec);
+    snprintf(&ppm_dumpname[32], 9, "%04d", (int)((time->tv_nsec) / 1000000));
+    strncat(&ppm_dumpname[40], ".ppm", 5);
     dumpfd = open(ppm_dumpname, O_WRONLY | O_NONBLOCK | O_CREAT, 00666);
 
     snprintf(&ppm_header[4], 11, "%010d", (int)time->tv_sec);
@@ -168,16 +168,16 @@ static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec 
 }
 
 char pgm_header[] = "P5\n#9999999999 sec 9999999999 msec \n" HRES_STR " " VRES_STR "\n255\n";
-char pgm_dumpname[] = "frames/test0000_loac4399_99999sec99999msec.pgm";
+char pgm_dumpname[] = "frames/test0000_loac4399_9999sec9999msec.pgm";
 
 static void dump_pgm(const void *p, int size, unsigned int tag, struct timespec *time)
 {
     int written, total, dumpfd;
 
     snprintf(&pgm_dumpname[11], 9, "%04d", tag);
-    snprintf(&pgm_dumpname[25], 6, "%05d", (int)time->tv_sec);
-    snprintf(&pgm_dumpname[33], 6, "%05d", (int)((time->tv_nsec) / 1000000));
-    //strncat(&pgm_dumpname[40], ".pgm", 5);
+    snprintf(&pgm_dumpname[25], 9, "%04d", (int)time->tv_sec);
+    snprintf(&pgm_dumpname[33], 9, "%04d", (int)((time->tv_nsec) / 1000000));
+    strncat(&pgm_dumpname[40], ".pgm", 5);
     dumpfd = open(pgm_dumpname, O_WRONLY | O_NONBLOCK | O_CREAT, 00666);
 
     snprintf(&pgm_header[4], 11, "%010d", (int)time->tv_sec);
