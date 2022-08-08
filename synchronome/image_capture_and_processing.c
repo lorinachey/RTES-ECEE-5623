@@ -50,7 +50,7 @@
 #define MAX_VRES (1080)
 #define MAX_PIXEL_SIZE (3)
 
-#define MIN_DIFF_THRESHOLD (280000)
+#define MIN_DIFF_THRESHOLD (276500)
 #define MAX_DIFF_THRESHOLD (500000)
 
 #define HRES (640)
