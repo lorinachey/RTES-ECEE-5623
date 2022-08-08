@@ -139,9 +139,9 @@ static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec 
     int written, total, dumpfd;
 
     snprintf(&ppm_dumpname[11], 9, "%04d", tag);
-    snprintf(&ppm_dumpname[23], "%05d", (int)time->tv_sec);
-    snprintf(&ppm_dumpname[31], "%05d", (int)((time->tv_nsec) / 1000000));
-    strncat(&ppm_dumpname[40], ".ppm", 5);
+    snprintf(&ppm_dumpname[25], 6, "%05d", (int)time->tv_sec);
+    snprintf(&ppm_dumpname[33], 6, "%05d", (int)((time->tv_nsec) / 1000000));
+    //strncat(&ppm_dumpname[40], ".ppm", 5);
     dumpfd = open(ppm_dumpname, O_WRONLY | O_NONBLOCK | O_CREAT, 00666);
 
     snprintf(&ppm_header[4], 11, "%010d", (int)time->tv_sec);
@@ -175,9 +175,9 @@ static void dump_pgm(const void *p, int size, unsigned int tag, struct timespec 
     int written, total, dumpfd;
 
     snprintf(&pgm_dumpname[11], 9, "%04d", tag);
-    snprintf(&pgm_dumpname[23], "%05d", (int)time->tv_sec);
-    snprintf(&pgm_dumpname[31], "%05d", (int)((time->tv_nsec) / 1000000));
-    strncat(&pgm_dumpname[40], ".pgm", 5);
+    snprintf(&pgm_dumpname[25], 6, "%05d", (int)time->tv_sec);
+    snprintf(&pgm_dumpname[33], 6, "%05d", (int)((time->tv_nsec) / 1000000));
+    //strncat(&pgm_dumpname[40], ".pgm", 5);
     dumpfd = open(pgm_dumpname, O_WRONLY | O_NONBLOCK | O_CREAT, 00666);
 
     snprintf(&pgm_header[4], 11, "%010d", (int)time->tv_sec);
