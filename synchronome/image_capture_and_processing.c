@@ -109,9 +109,6 @@ static int force_format = 1;
 static double fnow = 0.0, fstart = 0.0, fstop = 0.0;
 static struct timespec time_now, time_start, time_stop;
 
-int get_difference_of_current_and_prev_images(void);
-void copy_image_from_scratchpad_to_frame_store_ring_buffer(void);
-
 static void errno_exit(const char *s)
 {
     fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
@@ -512,7 +509,7 @@ void copy_image_from_scratchpad_to_frame_store_ring_buffer() {
  * @return int 
  */
 int get_difference_of_current_and_prev_images() {
-    int diff = 0;
+    int diff = 0; // TODO: make the diff an unsigned int
     int loop_count = HRES * VRES * PIXEL_SIZE;
 
     for (int i = 0; i < loop_count; i++) {

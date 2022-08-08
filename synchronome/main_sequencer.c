@@ -200,7 +200,7 @@ void main(void)
 
             threadParams[i].threadIdx = i;
         } else {
-            // run frame acquisition and frame selection services on a separate core
+            // run frame_acq and frame_store services on a separate core
             CPU_ZERO(&threadcpu);
             cpuidx = (RT_CORE);
             CPU_SET(cpuidx, &threadcpu);
@@ -314,9 +314,8 @@ void Sequencer(int id)
 
     seqCnt++;
 
-    clock_gettime(MY_CLOCK_TYPE, &current_time_val);
+    clock_gettime(MY_CLOCK_TYPE, &current_time_val); current_realtime=realtime(&current_time_val);
     // printf("Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
-    //current_realtime=realtime(&current_time_val);
     //// syslog(LOG_CRIT, "RTES Sequencer on core %d for cycle %llu @ sec= %6.9lf\n", sched_getcpu(), seqCnt, current_realtime-start_realtime);
 
     // Release each service at a sub-rate of the generic sequencer rate which is set to run at 100Hz
@@ -338,7 +337,7 @@ void *Service_1_frame_acquisition(void *threadp)
     // Start up processing and resource initialization
     clock_gettime(MY_CLOCK_TYPE, &current_time_val);
     current_realtime = realtime(&current_time_val);
-    //syslog(LOG_CRIT, "%d thread @ sec= %6.9lf\n", SYS_LOG_TAG_S1, current_realtime - start_realtime);
+   // syslog(LOG_CRIT, "%d thread @ sec= %6.9lf\n", SYS_LOG_TAG_S1, current_realtime - start_realtime);
 
     while (!abortS1_frame_acq) // check for synchronous abort request
     {
@@ -418,7 +417,7 @@ void *Service_3_frame_storage(void *threadp)
             break;
         S3Cnt++;
 
-        // DO WORK - write frames to the SD card
+        // DO WORK - store frame
         store_cnt = seq_frame_store();
 
         clock_gettime(MY_CLOCK_TYPE, &current_time_val);
